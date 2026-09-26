@@ -8,6 +8,7 @@ const NY = 'America/New_York';
 const MAX_SYMBOLS = 30;
 const EARNINGS_DAYS = 90;
 const NEWS_DAYS = 7;
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'localhost']);
 
 // "aaa,,bad symbol,AAA" → ["AAA"]. 형식이 틀린 티커는 조용히 건너뛴다.
 function parseSymbols(raw) {
@@ -36,6 +37,15 @@ async function collect(symbols, fn) {
 
 export function createApp({ store, finnhub, fx, now = () => new Date(), publicDir, vendorDir }) {
   const app = express();
+
+  // DNS rebinding 방어: 다른 도메인 이름으로 들어온 요청(악성 사이트가 자기 도메인을
+  // 127.0.0.1로 돌려놓은 경우)은 보유 내역에 닿기 전에 막는다.
+  app.use((req, res, next) => {
+    const hostname = String(req.headers.host ?? '').replace(/:\d+$/, '');
+    if (ALLOWED_HOSTS.has(hostname)) return next();
+    res.status(403).json({ error: { code: 'FORBIDDEN_HOST', message: '이 주소로는 대시보드에 접근할 수 없습니다. http://127.0.0.1 로 열어주세요.' } });
+  });
+
   app.use(express.json());
 
   app.get('/api/health', (req, res) => {
