@@ -47,9 +47,9 @@ test('종목이 1개면 영역 전체, 0개거나 값이 0 이하면 빼고 계�
   assert.deepEqual(rects.map((r) => r.id), ['A']);
 });
 
-test('flatColors: 알파벳 순으로 이미지의 청록·파랑·노랑·코랄부터 배정하고, 순서와 상관없이 같다', () => {
+test('flatColors: 알파벳 순으로 차분한 청록·파랑·머스터드·코랄부터 배정하고, 순서와 상관없이 같다', () => {
   const colors = flatColors(['D', 'C', 'B', 'A']);
-  assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => colors.get(s)), ['#14C1D6', '#0A77C2', '#FFC220', '#F76C62']);
+  assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => colors.get(s)), ['#4FA3B3', '#4A7BA7', '#C99A3E', '#CC7A70']);
   assert.equal(flatColors(['A', 'B', 'C', 'D']).get('C'), colors.get('C'));
 });
 
@@ -68,14 +68,14 @@ test('tileLabel: 아주 작은 칸은 글자 없음, 작은 칸은 티커만, �
 });
 
 test('tileLabel: 글자 크기는 칸에 맞춰 커지고, 긴 티커는 칸 폭에 맞춰 줄인다', () => {
-  assert.deepEqual(tileLabel({ w: 95, h: 176 }, 'AAPL'), { showSymbol: true, showWeight: true, symbolPx: 22, weightPx: 16 });
-  assert.equal(tileLabel({ w: 80, h: 62 }, 'BRK.B').symbolPx, 14);
+  assert.deepEqual(tileLabel({ w: 95, h: 176 }, 'AAPL'), { showSymbol: true, showWeight: true, symbolPx: 20, weightPx: 16 });
+  assert.equal(tileLabel({ w: 80, h: 62 }, 'BRK.B').symbolPx, 13);
 });
 
-test('tileLabel: 넓은 글자(M·W·Q)가 많은 티커도 칸 폭(좌우 여백 24px 제외)을 넘지 않는다', () => {
+test('tileLabel: 넓은 글자(M·W·Q)가 많은 티커도 칸 폭(좌우 여백 24px + 흰 테두리 4px 제외)을 넘지 않는다', () => {
   // 굵은 대문자 한 글자는 글자 크기의 최대 약 0.8배 폭(브라우저에서 잰 값: QQQ 0.796, NVDA 0.745)
   for (const [w, h, symbol] of [[115, 176, 'MSFT'], [95, 176, 'AAPL'], [129, 84, 'QQQ'], [90, 200, 'NVDA']]) {
     const { symbolPx } = tileLabel({ w, h }, symbol);
-    assert.ok(symbolPx * 0.8 * symbol.length <= w - 24, `${symbol} ${symbolPx}px가 ${w}px 칸을 넘친다`);
+    assert.ok(symbolPx * 0.8 * symbol.length <= w - 28, `${symbol} ${symbolPx}px가 ${w}px 칸을 넘친다`);
   }
 });

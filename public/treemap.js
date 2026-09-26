@@ -69,10 +69,11 @@ export function squarify(items, width, height) {
   return out;
 }
 
-// 평면 단색 팔레트. 앞의 넷은 참고 이미지의 청록·파랑·노랑·코랄, 나머지는 같은 톤으로 맞춘 색.
+// 차분한 평면 단색 팔레트(채도를 낮추고 약간 어둡게 해서 흰 글자가 잘 읽히게).
+// 순서: 청록·스틸 블루·머스터드·더스티 코랄·세이지 그린·라벤더 그레이·테라코타·로즈·딥 틸·슬레이트 블루
 const PALETTE = [
-  '#14C1D6', '#0A77C2', '#FFC220', '#F76C62', '#2BB673',
-  '#7B5CD6', '#F7931E', '#E8508B', '#0E9F9A', '#3F51B5',
+  '#4FA3B3', '#4A7BA7', '#C99A3E', '#CC7A70', '#5FA37D',
+  '#8574B8', '#C98A52', '#B96A8A', '#4E9A95', '#5A67A8',
 ];
 
 // 종목별 배경색 → Map(symbol → hex). 티커 알파벳 순으로 팔레트를 차례로 배정해서
@@ -85,7 +86,7 @@ export function flatColors(symbols) {
 // 칸 글자 배치: 아주 작은 칸 = 글자 없음, 작은 칸 = 티커, 큰 칸 = 티커 + 비중.
 // 글자는 칸이 클수록 커지고(티커 최대 36px, 비중 13~24px), 긴 티커는 칸 폭을 넘지 않게 줄인다.
 const CHAR_WIDTH = 0.8; // 굵은 대문자 한 글자의 최대 폭(글자 크기 대비, 브라우저에서 잰 값: QQQ 0.796)
-const PADDING_X = 24; // .heat-tile 좌우 padding 12px × 2
+const PADDING_X = 28; // .heat-tile 좌우 padding 12px × 2 + 흰 테두리 2px × 2
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export function tileLabel(rect, symbol) {
