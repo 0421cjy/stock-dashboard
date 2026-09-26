@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 포트폴리오</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/vendor/chart.js/chart.umd.js"></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div id="banner" class="banner" role="alert" hidden></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <header class="topbar">
+    <h1>내 포트폴리오</h1>
+    <div class="topbar-right">
+      <span id="status" class="status">불러오는 중…</span>
+      <button id="refresh-btn" type="button" class="icon" title="지금 새로고침" aria-label="지금 새로고침">⟳</button>
+      <button id="add-holding-btn" type="button" class="primary">+ 종목 추가</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="col-main">
+      <section id="summary" class="summary" aria-label="요약"></section>
+
+      <section class="card">
+        <div class="table-wrap">
+          <table class="holdings">
+            <thead>
+              <tr>
+                <th data-sort="symbol" class="left">종목</th>
+                <th data-sort="shares">수량</th>
+                <th data-sort="avgCost">평단가</th>
+                <th data-sort="price">현재가</th>
+                <th data-sort="dayChangePct">오늘</th>
+                <th data-sort="marketValue">평가금액</th>
+                <th data-sort="pnl">평가손익</th>
+                <th data-sort="weight">비중</th>
+                <th aria-label="관리"></th>
+              </tr>
+            </thead>
+            <tbody id="holdings-body"></tbody>
+          </table>
+        </div>
+        <p id="holdings-empty" class="empty" hidden>아직 종목이 없습니다. 오른쪽 위 [+ 종목 추가]로 첫 종목을 넣어보세요.</p>
+      </section>
+
+      <section class="card charts">
+        <div>
+          <h2>평가금액 비중</h2>
+          <div class="chart-box"><canvas id="weight-chart" aria-label="종목별 평가금액 비중"></canvas></div>
+        </div>
+        <div>
+          <h2>종목별 평가손익</h2>
+          <div class="chart-box"><canvas id="pnl-chart" aria-label="종목별 평가손익"></canvas></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col-side">
+      <section class="card">
+        <div class="card-head">
+          <h2>디데이</h2>
+          <button id="add-event-btn" type="button">+ 일정 추가</button>
+        </div>
+        <ol id="dday-list" class="dday"></ol>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>뉴스</h2>
+          <select id="news-filter" aria-label="뉴스 종목 필터"><option value="">전체</option></select>
+        </div>
+        <ul id="news-list" class="news"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="holding-dialog">
+    <form id="holding-form" method="dialog">
+      <h2 id="holding-title">종목 추가</h2>
+      <label>티커 <input id="h-symbol" autocomplete="off" placeholder="예: AAPL" required></label>
+      <label>수량 <input id="h-shares" inputmode="decimal" placeholder="예: 10" required></label>
+      <label>평단가 (USD) <input id="h-avgcost" inputmode="decimal" placeholder="예: 180.50" required></label>
+      <p id="holding-error" class="form-error" hidden></p>
+      <div class="actions">
+        <button type="submit" value="cancel" formnovalidate>취소</button>
+        <button id="holding-save" type="submit" value="save" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="event-dialog">
+    <form id="event-form" method="dialog">
+      <h2 id="event-title">일정 추가</h2>
+      <label>제목 <input id="ev-title" maxlength="60" placeholder="예: FOMC 금리 발표" required></label>
+      <label>날짜 <input id="ev-date" type="date" required></label>
+      <label>메모 <input id="ev-note" maxlength="200" placeholder="선택"></label>
+      <p id="event-error" class="form-error" hidden></p>
+      <div class="actions">
+        <button id="event-delete" type="button" class="danger-text" hidden>삭제</button>
+        <span class="spacer"></span>
+        <button type="submit" value="cancel" formnovalidate>취소</button>
+        <button id="event-save" type="submit" value="save" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <p id="confirm-message"></p>
+      <div class="actions">
+        <button type="submit" value="cancel">취소</button>
+        <button type="submit" value="ok" class="danger">삭제</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
