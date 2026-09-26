@@ -111,6 +111,15 @@ test('티커를 확인할 수 없으면(키 없음 등) 이름 없이 저장한�
   assert.equal(r.body.name, null);
 });
 
+test('API 키가 잘못됐으면 종목 추가가 키 오류를 알린다', async () => {
+  await ctx.close();
+  ctx = await start({ finnhub: fakeFinnhub({ profile: async () => { throw new AppError('INVALID_KEY', 'Finnhub API 키가 올바르지 않습니다.', 503); } }) });
+  const r = await ctx.call('POST', '/api/holdings', { symbol: 'AAA', shares: 1, avgCost: 1 });
+  assert.equal(r.status, 503);
+  assert.equal(r.body.error.code, 'INVALID_KEY');
+  assert.deepEqual((await ctx.call('GET', '/api/portfolio')).body.holdings, []);
+});
+
 test('중복 409, 수정 200, 삭제 204, 없는 종목 삭제 404', async () => {
   await ctx.call('POST', '/api/holdings', { symbol: 'AAA', shares: 1, avgCost: 1 });
   assert.equal((await ctx.call('POST', '/api/holdings', { symbol: 'aaa', shares: 1, avgCost: 1 })).status, 409);

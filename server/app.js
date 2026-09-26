@@ -58,6 +58,8 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
       if (!name) await finnhub.quote(symbol);
     } catch (err) {
       if (err.code === 'NOT_FOUND') throw new AppError('NOT_FOUND', '찾을 수 없는 티커입니다.', 400);
+      // 키가 틀렸으면 저장하지 않고 알린다. 그래야 사용자가 키부터 고친다.
+      if (err.code === 'INVALID_KEY') throw err;
       // 키 없음·한도 초과·연결 실패로 확인할 수 없으면 이름 없이 저장한다.
     }
     const holding = await store.addHolding({ ...body, symbol });

@@ -119,7 +119,9 @@ export async function refreshAll() {
     render();
     return;
   }
-  await Promise.all([refreshHealth(), refreshMarket(), refreshQuotes(), refreshSlow()]);
+  await Promise.all([refreshMarket(), refreshQuotes(), refreshSlow()]);
+  // 키가 틀렸는지는 Finnhub 호출이 끝나야 알 수 있으므로 마지막에 확인한다.
+  await refreshHealth();
   render();
 }
 
@@ -223,7 +225,11 @@ function startSchedulers() {
     await refreshQuotes();
     render();
   }, QUOTE_MS);
-  setInterval(async () => { await refreshMarket(); render(); }, MARKET_MS);
+  setInterval(async () => {
+    await refreshMarket();
+    await refreshHealth();
+    render();
+  }, MARKET_MS);
   setInterval(async () => { await refreshSlow(); render(); }, SLOW_MS);
 }
 
