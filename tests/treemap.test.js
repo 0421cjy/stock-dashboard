@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { squarify, flatColors, changeMark } from '../public/treemap.js';
+import { squarify, flatColors, tileLabel } from '../public/treemap.js';
 
 const EPS = 1e-9;
 const area = (r) => r.w * r.h;
@@ -61,12 +61,21 @@ test('flatColors: 10종목까지는 색이 겹치지 않고, 11번째부터 반�
   assert.equal(flatColors([]).size, 0);
 });
 
-test('changeMark: ▲/▼ 방향과 굵기 단계(1% 미만 400, 1~3% 600, 3% 이상 800)', () => {
-  assert.deepEqual(changeMark(0.037), { text: '▲ 3.7%', weight: 800 });
-  assert.deepEqual(changeMark(0.03), { text: '▲ 3.0%', weight: 800 });
-  assert.deepEqual(changeMark(-0.013), { text: '▼ 1.3%', weight: 600 });
-  assert.deepEqual(changeMark(0.01), { text: '▲ 1.0%', weight: 600 });
-  assert.deepEqual(changeMark(0.002), { text: '▲ 0.2%', weight: 400 });
-  assert.deepEqual(changeMark(0), { text: '— 0.0%', weight: 400 });
-  assert.deepEqual(changeMark(null), { text: '—', weight: 400 });
+test('tileLabel: 아주 작은 칸은 글자 없음, 작은 칸은 티커만, 큰 칸은 티커와 비중', () => {
+  assert.deepEqual(tileLabel({ w: 20, h: 100 }, 'AAPL'), { showSymbol: false, showWeight: false });
+  assert.deepEqual(tileLabel({ w: 80, h: 23 }, 'TSLA'), { showSymbol: true, showWeight: false, symbolPx: 12 });
+  assert.deepEqual(tileLabel({ w: 300, h: 260 }, 'SOFI'), { showSymbol: true, showWeight: true, symbolPx: 36, weightPx: 24 });
+});
+
+test('tileLabel: 글자 크기는 칸에 맞춰 커지고, 긴 티커는 칸 폭에 맞춰 줄인다', () => {
+  assert.deepEqual(tileLabel({ w: 95, h: 176 }, 'AAPL'), { showSymbol: true, showWeight: true, symbolPx: 22, weightPx: 16 });
+  assert.equal(tileLabel({ w: 80, h: 62 }, 'BRK.B').symbolPx, 14);
+});
+
+test('tileLabel: 넓은 글자(M·W·Q)가 많은 티커도 칸 폭(좌우 여백 24px 제외)을 넘지 않는다', () => {
+  // 굵은 대문자 한 글자는 글자 크기의 최대 약 0.8배 폭(브라우저에서 잰 값: QQQ 0.796, NVDA 0.745)
+  for (const [w, h, symbol] of [[115, 176, 'MSFT'], [95, 176, 'AAPL'], [129, 84, 'QQQ'], [90, 200, 'NVDA']]) {
+    const { symbolPx } = tileLabel({ w, h }, symbol);
+    assert.ok(symbolPx * 0.8 * symbol.length <= w - 24, `${symbol} ${symbolPx}px가 ${w}px 칸을 넘친다`);
+  }
 });

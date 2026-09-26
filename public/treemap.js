@@ -1,5 +1,4 @@
 // 비중 히트맵의 배치(squarified treemap)와 색. DOM에 의존하지 않는 순수 함수.
-import { formatPct } from './format.js';
 
 // items: [{id, value}] → [{id, x, y, w, h}]. 칸 넓이는 value에 비례하고,
 // 칸 모양이 되도록 정사각형에 가깝게 줄을 나눈다(Bruls 외, "Squarified Treemaps").
@@ -83,11 +82,18 @@ export function flatColors(symbols) {
   return new Map(unique.map((s, i) => [s, PALETTE[i % PALETTE.length]]));
 }
 
-// 흰 글자 위의 등락 표시: 방향은 ▲/▼, 크기는 굵기(1% 미만 400, 1~3% 600, 3% 이상 800).
-export function changeMark(changePct) {
-  if (changePct == null || !Number.isFinite(changePct)) return { text: '—', weight: 400 };
-  const abs = Math.abs(changePct);
-  const arrow = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '—';
-  const weight = abs >= 0.03 ? 800 : abs >= 0.01 ? 600 : 400;
-  return { text: `${arrow} ${formatPct(abs)}`, weight };
+// 칸 글자 배치: 아주 작은 칸 = 글자 없음, 작은 칸 = 티커, 큰 칸 = 티커 + 비중.
+// 글자는 칸이 클수록 커지고(티커 최대 36px, 비중 13~24px), 긴 티커는 칸 폭을 넘지 않게 줄인다.
+const CHAR_WIDTH = 0.8; // 굵은 대문자 한 글자의 최대 폭(글자 크기 대비, 브라우저에서 잰 값: QQQ 0.796)
+const PADDING_X = 24; // .heat-tile 좌우 padding 12px × 2
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+export function tileLabel(rect, symbol) {
+  if (rect.w < 28 || rect.h < 18) return { showSymbol: false, showWeight: false };
+  const short = Math.min(rect.w, rect.h);
+  const fitWidth = (rect.w - PADDING_X) / (CHAR_WIDTH * String(symbol).length);
+  // 내림: 반올림으로 커지면 칸 폭을 넘을 수 있다
+  const symbolPx = Math.floor(clamp(Math.min(short / 3, fitWidth), 12, 36));
+  if (rect.w < 56 || rect.h < 48) return { showSymbol: true, showWeight: false, symbolPx };
+  return { showSymbol: true, showWeight: true, symbolPx, weightPx: Math.round(clamp(short / 6, 13, 24)) };
 }
