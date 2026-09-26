@@ -1,7 +1,11 @@
 // 화면 영역(대화상자·차트·디데이·뉴스)을 app.js에 연결한다.
 import { api } from './api.js';
-import { state, handlers, afterHoldingChange, notify } from './app.js';
+import { state, handlers, addRenderer, afterHoldingChange, notify } from './app.js';
 import { openHoldingDialog, confirmDialog } from './forms.js';
+import { createCharts } from './views/charts.js';
+
+const charts = createCharts(document.getElementById('weight-chart'), document.getElementById('pnl-chart'));
+addRenderer((portfolio) => charts.update(portfolio.rows));
 
 handlers.addHolding = () => openHoldingDialog({
   mode: 'add',
