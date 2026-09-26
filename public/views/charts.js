@@ -2,6 +2,13 @@ import { formatUsd } from '../format.js';
 
 const UP = '#d6293a';
 const DOWN = '#1f5fd1';
+const ZERO_LINE = { color: '#16191f', width: 2 };
+const GRID_LINE = { color: 'rgba(0, 0, 0, 0.1)', width: 1 };
+
+// 평가손익 차트 격자선: 0(이익·손해 경계)만 진한 굵은 선으로 구분한다.
+export function gridLine(value) {
+  return value === 0 ? ZERO_LINE : GRID_LINE;
+}
 
 // 종목별 평가손익 막대 차트. (비중은 views/heatmap.js)
 export function createCharts(pnlCanvas) {
@@ -25,7 +32,16 @@ export function createCharts(pnlCanvas) {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => formatUsd(c.raw, { sign: true }) } },
       },
-      scales: { y: { ticks: { callback: (v) => formatUsd(v) } } },
+      scales: {
+        y: {
+          beginAtZero: true, // 모두 이익이거나 모두 손해여도 0 기준선이 보이게
+          ticks: { callback: (v) => formatUsd(v) },
+          grid: {
+            color: (ctx) => gridLine(ctx.tick?.value).color,
+            lineWidth: (ctx) => gridLine(ctx.tick?.value).width,
+          },
+        },
+      },
     },
   });
 
