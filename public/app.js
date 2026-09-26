@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { computePortfolio, mergeQuotes, sortRows } from './calc.js';
+import { computePortfolio, mergeQuotes, sortRows, keepFailed } from './calc.js';
 import { formatClock } from './format.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
@@ -7,7 +7,9 @@ import { renderHoldings } from './views/holdings.js';
 const QUOTE_MS = 30_000;
 const MARKET_MS = 60_000;
 const SLOW_MS = 30 * 60_000;
+const SLOW_RETRY_MS = 60_000;
 const TOAST_MS = 5_000;
+let slowRetryTimer = null;
 
 const KEY_HELP = {
   missing: 'Finnhub API 키가 없습니다. finnhub.io에서 무료 키를 받아 .env 파일의 FINNHUB_API_KEY에 넣고 서버를 다시 켜주세요. 보유 종목 입력은 지금도 할 수 있습니다.',
@@ -89,11 +91,23 @@ async function refreshSlow() {
     api.fx(),
   ]);
   if (news.status === 'fulfilled') {
-    state.news = news.value.items;
+    state.news = keepFailed(state.news, news.value).sort((a, b) => b.datetime - a.datetime);
     state.newsFailed = news.value.failed;
   }
-  if (earnings.status === 'fulfilled') state.earnings = earnings.value.items;
+  if (earnings.status === 'fulfilled') {
+    state.earnings = keepFailed(state.earnings, earnings.value).sort((a, b) => a.date.localeCompare(b.date));
+  }
   if (fx.status === 'fulfilled') state.fx = fx.value;
+
+  // 일부 종목을 못 가져왔으면(대개 호출 한도) 30분을 기다리지 않고 1분 뒤 한 번 더 시도한다.
+  const failedSome = [news, earnings].some((r) => r.status === 'rejected' || r.value.failed.length);
+  if (failedSome && !slowRetryTimer) {
+    slowRetryTimer = setTimeout(async () => {
+      slowRetryTimer = null;
+      await refreshSlow();
+      render();
+    }, SLOW_RETRY_MS);
+  }
 }
 
 export async function refreshAll() {

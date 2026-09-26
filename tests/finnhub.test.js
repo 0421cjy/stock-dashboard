@@ -79,6 +79,33 @@ test('429: 이전 값은 stale로 주고, 백오프 동안은 호출하지 않�
   assert.equal(fetch.calls.length, 2, '백오프 중에는 Finnhub를 부르지 않는다');
 });
 
+test('429: 동시에 받은 429는 대기 시간을 한 번만 늘린다', async () => {
+  const now = clock();
+  let limited = true;
+  const fetch = fakeFetch(() => (limited ? { status: 429 } : { body: QUOTE }));
+  const fh = createFinnhubClient({ apiKey: 'k', fetch, now });
+  await Promise.allSettled(['A', 'B', 'C', 'D'].map((s) => fh.quote(s)));
+  limited = false;
+  now.advance(5_001);
+  const r = await fh.quote('E');
+  assert.equal(r.value.price, 16.67, '첫 백오프(5초)가 지나면 다시 호출한다');
+});
+
+test('동시에 Finnhub로 나가는 요청은 4개로 제한한다', async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const fetch = async () => {
+    inFlight += 1;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise((r) => setTimeout(r, 5));
+    inFlight -= 1;
+    return new Response(JSON.stringify(QUOTE), { status: 200 });
+  };
+  const fh = createFinnhubClient({ apiKey: 'k', fetch, now: clock() });
+  await Promise.all(Array.from({ length: 12 }, (_, i) => fh.quote(`S${i}`)));
+  assert.equal(maxInFlight, 4);
+});
+
 test('429: 이전 값이 없으면 RATE_LIMITED', async () => {
   const fh = createFinnhubClient({ apiKey: 'k', fetch: fakeFetch(() => ({ status: 429 })), now: clock() });
   await assert.rejects(fh.quote('SOFI'), { code: 'RATE_LIMITED' });

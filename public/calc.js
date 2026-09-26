@@ -94,6 +94,11 @@ export function mergeQuotes(prev = {}, incoming = {}) {
   return out;
 }
 
+// 종목별 목록(뉴스·실적)을 새로 받을 때, 가져오지 못한 종목은 이전 항목을 유지한다.
+export function keepFailed(prevItems = [], { items = [], failed = [] } = {}) {
+  return [...items, ...prevItems.filter((p) => failed.includes(p.symbol))];
+}
+
 // 표 정렬. null은 방향과 상관없이 맨 뒤.
 export function sortRows(rows, key, dir = 'desc') {
   const sign = dir === 'asc' ? 1 : -1;

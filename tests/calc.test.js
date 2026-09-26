@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePortfolio, parseAmount, mergeQuotes, sortRows } from '../public/calc.js';
+import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed } from '../public/calc.js';
 
 const holdings = [
   { symbol: 'AAA', shares: 10, avgCost: 100 },
@@ -94,6 +94,12 @@ test('mergeQuotes는 실패한 종목의 이전 가격을 stale로 유지한다'
 test('mergeQuotes는 더 이상 없는 종목을 버린다', () => {
   const merged = mergeQuotes({ OLD: { price: 1 } }, { NEW: { price: 2 } });
   assert.deepEqual(Object.keys(merged), ['NEW']);
+});
+
+test('keepFailed는 실패한 종목의 이전 항목을 유지하고 나머지는 새 값으로 바꾼다', () => {
+  const prev = [{ symbol: 'A', v: 'old' }, { symbol: 'B', v: 'old' }, { symbol: 'GONE', v: 'old' }];
+  const merged = keepFailed(prev, { items: [{ symbol: 'A', v: 'new' }], failed: ['B'] });
+  assert.deepEqual(merged, [{ symbol: 'A', v: 'new' }, { symbol: 'B', v: 'old' }]);
 });
 
 test('sortRows는 null을 방향과 상관없이 맨 뒤에 둔다', () => {

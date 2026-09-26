@@ -12,16 +12,36 @@ const TTL = {
 const FIRST_BACKOFF = 5_000;
 const MAX_BACKOFF = 60_000;
 const NEWS_PER_SYMBOL = 5;
+// 무료 플랜 초당 한도(30회)를 넘지 않도록 동시에 나가는 요청 수를 제한한다.
+const MAX_CONCURRENT = 4;
 
 export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Date.now, cache = createCache({ now }) }) {
   let authFailed = false;
   let backoffMs = 0;
   let blockedUntil = 0;
+  let active = 0;
+  const waiting = [];
 
-  async function request(pathname, params) {
-    if (!apiKey) {
-      throw new AppError('MISSING_KEY', 'Finnhub API 키가 없습니다. .env 파일에 FINNHUB_API_KEY를 넣고 서버를 다시 켜주세요.', 503);
+  async function withSlot(fn) {
+    if (active < MAX_CONCURRENT) active += 1;
+    else await new Promise((resolve) => waiting.push(resolve)); // 끝난 요청의 자리를 그대로 넘겨받는다
+    try {
+      return await fn();
+    } finally {
+      const next = waiting.shift();
+      if (next) next();
+      else active -= 1;
     }
+  }
+
+  function request(pathname, params) {
+    if (!apiKey) {
+      return Promise.reject(new AppError('MISSING_KEY', 'Finnhub API 키가 없습니다. .env 파일에 FINNHUB_API_KEY를 넣고 서버를 다시 켜주세요.', 503));
+    }
+    return withSlot(() => send(pathname, params));
+  }
+
+  async function send(pathname, params) {
     if (now() < blockedUntil) {
       throw new AppError('RATE_LIMITED', 'Finnhub 호출 한도를 넘어 잠시 쉬는 중입니다.', 503);
     }
@@ -43,8 +63,11 @@ export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Da
       throw new AppError('UPSTREAM', '이 데이터는 Finnhub 무료 플랜에서 제공되지 않습니다.', 502);
     }
     if (res.status === 429) {
-      backoffMs = backoffMs ? Math.min(backoffMs * 2, MAX_BACKOFF) : FIRST_BACKOFF;
-      blockedUntil = now() + backoffMs;
+      // 이미 막혀 있는 동안 도착한 429(동시에 보낸 요청들)는 대기 시간을 다시 늘리지 않는다.
+      if (now() >= blockedUntil) {
+        backoffMs = backoffMs ? Math.min(backoffMs * 2, MAX_BACKOFF) : FIRST_BACKOFF;
+        blockedUntil = now() + backoffMs;
+      }
       throw new AppError('RATE_LIMITED', 'Finnhub 호출 한도를 넘어 잠시 쉬는 중입니다.', 503);
     }
     if (!res.ok) {
