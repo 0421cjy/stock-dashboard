@@ -3,12 +3,17 @@ import { api } from './api.js';
 import { state, handlers, addRenderer, afterHoldingChange, afterEventChange, render, notify } from './app.js';
 import { openHoldingDialog, openEventDialog, confirmDialog } from './forms.js';
 import { createCharts } from './views/charts.js';
+import { createHeatmap } from './views/heatmap.js';
 import { buildDdayList } from './dday.js';
 import { renderDday } from './views/events.js';
 import { renderNews } from './views/news.js';
 
-const charts = createCharts(document.getElementById('weight-chart'), document.getElementById('pnl-chart'));
-addRenderer((portfolio) => charts.update(portfolio.rows));
+const heatmap = createHeatmap(document.getElementById('weight-heatmap'));
+const charts = createCharts(document.getElementById('pnl-chart'));
+addRenderer((portfolio) => {
+  heatmap.update(portfolio.rows);
+  charts.update(portfolio.rows);
+});
 
 handlers.addHolding = () => openHoldingDialog({
   mode: 'add',
