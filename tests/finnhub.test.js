@@ -103,14 +103,13 @@ test('연결 실패는 UPSTREAM', async () => {
   await assert.rejects(fh.quote('SOFI'), { code: 'UPSTREAM' });
 });
 
-test('profile: 회사명, 빈 응답은 NOT_FOUND', async () => {
-  const fh = createFinnhubClient({
-    apiKey: 'k',
-    now: clock(),
-    fetch: fakeFetch((u) => ({ body: u.searchParams.get('symbol') === 'SOFI' ? { name: 'SoFi Technologies Inc', ticker: 'SOFI' } : {} })),
-  });
+test('profile: 회사명을 돌려주고, 빈 응답(ETF 등)은 이름 없이 24시간 캐시한다', async () => {
+  const fetch = fakeFetch((u) => ({ body: u.searchParams.get('symbol') === 'SOFI' ? { name: 'SoFi Technologies Inc', ticker: 'SOFI' } : {} }));
+  const fh = createFinnhubClient({ apiKey: 'k', now: clock(), fetch });
   assert.deepEqual((await fh.profile('SOFI')).value, { symbol: 'SOFI', name: 'SoFi Technologies Inc' });
-  await assert.rejects(fh.profile('NOPE'), { code: 'NOT_FOUND', message: '찾을 수 없는 티커입니다.' });
+  assert.deepEqual((await fh.profile('VOO')).value, { symbol: 'VOO', name: null });
+  await fh.profile('VOO');
+  assert.equal(fetch.calls.length, 2, '이름 없는 결과도 캐시해 매번 다시 부르지 않는다');
 });
 
 test('news: 최신순 5개, 링크 없는 기사 제외, 시간은 ms', async () => {

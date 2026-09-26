@@ -72,9 +72,9 @@ export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Da
 
     profile(symbol) {
       return cache.get(`profile:${symbol}`, TTL.profile, async () => {
+        // ETF 등은 회사 정보가 비어 있다. 없는 티커 여부는 호출하는 쪽이 시세로 판단한다.
         const p = await request('/stock/profile2', { symbol });
-        if (!p?.name) throw new AppError('NOT_FOUND', '찾을 수 없는 티커입니다.', 404);
-        return { symbol, name: p.name };
+        return { symbol, name: p?.name || null };
       });
     },
 

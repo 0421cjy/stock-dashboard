@@ -88,6 +88,21 @@ test('없는 티커는 400, 수량 오류는 티커 확인 전에 400', async ()
   assert.equal(ctx.finnhub.calls.profile, before);
 });
 
+test('회사 정보가 없는 티커(ETF)는 시세로 확인해 이름 없이 저장한다', async () => {
+  await ctx.close();
+  ctx = await start({
+    finnhub: fakeFinnhub({
+      async profile(s) { return { value: { symbol: s, name: null }, stale: false }; },
+    }),
+  });
+  const etf = await ctx.call('POST', '/api/holdings', { symbol: 'VOO', shares: 1, avgCost: 500 });
+  assert.equal(etf.status, 201);
+  assert.equal(etf.body.name, null);
+  const missing = await ctx.call('POST', '/api/holdings', { symbol: 'NOPE', shares: 1, avgCost: 1 });
+  assert.equal(missing.status, 400);
+  assert.equal(missing.body.error.message, '찾을 수 없는 티커입니다.');
+});
+
 test('티커를 확인할 수 없으면(키 없음 등) 이름 없이 저장한다', async () => {
   await ctx.close();
   ctx = await start({ finnhub: fakeFinnhub({ profile: async () => { throw new AppError('MISSING_KEY', '키 없음', 503); } }) });

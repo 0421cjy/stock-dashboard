@@ -54,6 +54,8 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
     let name = null;
     try {
       name = (await finnhub.profile(symbol)).value.name;
+      // 회사 정보가 없으면(ETF 등) 시세가 있는지로 실제 티커인지 확인한다.
+      if (!name) await finnhub.quote(symbol);
     } catch (err) {
       if (err.code === 'NOT_FOUND') throw new AppError('NOT_FOUND', '찾을 수 없는 티커입니다.', 400);
       // 키 없음·한도 초과·연결 실패로 확인할 수 없으면 이름 없이 저장한다.
