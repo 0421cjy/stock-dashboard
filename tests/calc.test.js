@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed } from '../public/calc.js';
+import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay } from '../public/calc.js';
 
 const holdings = [
   { symbol: 'AAA', shares: 10, avgCost: 100 },
@@ -94,6 +94,14 @@ test('mergeQuotes는 실패한 종목의 이전 가격을 stale로 유지한다'
 test('mergeQuotes는 더 이상 없는 종목을 버린다', () => {
   const merged = mergeQuotes({ OLD: { price: 1 } }, { NEW: { price: 2 } });
   assert.deepEqual(Object.keys(merged), ['NEW']);
+});
+
+test('quoteDelay: 없는 티커 하나는 전체 지연으로 보지 않는다', () => {
+  const ok = { price: 10, stale: false };
+  assert.equal(quoteDelay({ A: ok, B: { error: { code: 'NOT_FOUND', message: 'x' } } }), null);
+  assert.equal(quoteDelay({ A: ok, B: { price: 9, stale: true } }), '일부 시세가 지연되고 있습니다.');
+  assert.equal(quoteDelay({ A: ok, B: { error: { code: 'RATE_LIMITED', message: 'x' } } }), '일부 시세가 지연되고 있습니다.');
+  assert.equal(quoteDelay({ A: ok }), null);
 });
 
 test('keepFailed는 실패한 종목의 이전 항목을 유지하고 나머지는 새 값으로 바꾼다', () => {

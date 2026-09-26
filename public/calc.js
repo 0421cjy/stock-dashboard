@@ -94,6 +94,13 @@ export function mergeQuotes(prev = {}, incoming = {}) {
   return out;
 }
 
+// 화면 전체를 "지연"으로 표시할지 정한다. 캐시 값을 썼거나 일시적 오류(한도·연결)가 있을 때만
+// 지연이고, 없는 티커(NOT_FOUND)는 그 줄의 ⚠로만 알린다.
+export function quoteDelay(incoming = {}) {
+  const delayed = Object.values(incoming).some((q) => q?.stale || (q?.error && q.error.code !== 'NOT_FOUND'));
+  return delayed ? '일부 시세가 지연되고 있습니다.' : null;
+}
+
 // 종목별 목록(뉴스·실적)을 새로 받을 때, 가져오지 못한 종목은 이전 항목을 유지한다.
 export function keepFailed(prevItems = [], { items = [], failed = [] } = {}) {
   return [...items, ...prevItems.filter((p) => failed.includes(p.symbol))];

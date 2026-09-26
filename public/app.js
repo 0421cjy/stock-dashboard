@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { computePortfolio, mergeQuotes, sortRows, keepFailed } from './calc.js';
+import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay } from './calc.js';
 import { formatClock } from './format.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
@@ -59,7 +59,7 @@ async function refreshQuotes() {
     state.quotes = mergeQuotes(state.quotes, incoming);
     const values = Object.values(incoming);
     if (values.some((q) => q.price > 0 && !q.stale)) state.lastQuoteAt = new Date();
-    state.quoteProblem = values.some((q) => q.error || q.stale) ? '일부 시세가 지연되고 있습니다.' : null;
+    state.quoteProblem = quoteDelay(incoming);
   } catch (err) {
     const failed = Object.fromEntries(symbols().map((s) => [s, { error: { code: err.code, message: err.message } }]));
     state.quotes = mergeQuotes(state.quotes, failed);
