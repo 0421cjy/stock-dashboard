@@ -1,0 +1,6 @@
+# 비밀 값과 개인 보유 데이터는 절대 커밋하지 않는다
+.env
+data/
+
+node_modules/
+*.log
