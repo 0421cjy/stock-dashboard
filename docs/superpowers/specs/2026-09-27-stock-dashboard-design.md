@@ -92,7 +92,9 @@
 ```
 Stock/
 ├─ server/
-│  ├─ index.js      # Express 앱 생성(createApp)·라우트·127.0.0.1 바인딩
+│  ├─ app.js        # createApp(): 라우트·정적 파일·오류 처리
+│  ├─ index.js      # 진입점: 127.0.0.1 바인딩, 포트 충돌 안내
+│  ├─ errors.js     # AppError
 │  ├─ finnhub.js    # Finnhub 클라이언트: 요청, TTL 캐시, 동시 요청 병합, 429 처리
 │  ├─ cache.js      # 범용 TTL 캐시(마지막 성공 값 보관)
 │  ├─ store.js      # portfolio.json 읽기/검증/원자적 쓰기
@@ -101,10 +103,13 @@ Stock/
 ├─ public/
 │  ├─ index.html, styles.css
 │  ├─ app.js        # 초기화·새로고침 스케줄러·상태 표시
+│  ├─ setup.js      # 대화상자·차트·디데이·뉴스를 app.js에 연결
 │  ├─ api.js        # /api 호출 래퍼
+│  ├─ forms.js      # 종목·일정 입력 대화상자, 삭제 확인
 │  ├─ calc.js       # 손익·비중 계산 (순수 함수)
+│  ├─ format.js     # 금액·퍼센트·시간 표시 (순수 함수)
 │  ├─ dday.js       # 디데이·한국시간 변환 (순수 함수)
-│  └─ views/        # summary.js, holdings.js, charts.js, events.js, news.js
+│  └─ views/        # dom.js, summary.js, holdings.js, charts.js, events.js, news.js
 ├─ tests/           # 단위·라우트 테스트
 ├─ data/            # portfolio.json (git 제외)
 ├─ .env.example     # FINNHUB_API_KEY=, PORT=5173
@@ -115,7 +120,7 @@ Stock/
 
 - `calc.js`와 `dday.js`는 DOM이나 네트워크에 의존하지 않는 순수 함수로 두어 단독으로 테스트한다.
 - `finnhub.js`는 `fetch`를 주입받아 테스트에서 가짜 응답을 쓸 수 있게 한다.
-- `index.js`는 Finnhub 클라이언트와 저장소를 주입받는 `createApp()`을 내보내고, 실제 기동은 별도 진입점에서 한다.
+- `app.js`는 Finnhub 클라이언트와 저장소를 주입받는 `createApp()`을 내보내고, 실제 기동은 `index.js`에서 한다.
 
 ## 6. 데이터 모델
 
@@ -149,11 +154,11 @@ Stock/
 | `PUT /api/holdings/:symbol` | 수량·평단가 수정 | 수정된 항목 |
 | `DELETE /api/holdings/:symbol` | 종목 삭제 | 204 |
 | `POST /api/events` · `PUT /api/events/:id` · `DELETE /api/events/:id` | 직접 입력 일정 관리 | 항목 / 204 |
-| `GET /api/quotes?symbols=A,B` | 시세 | `{A: {price, change, changePct, prevClose, time, stale}}`, 실패 종목은 `error` |
-| `GET /api/news?symbols=A,B` | 최근 7일 뉴스 | `[{symbol, headline, source, url, datetime}]` |
-| `GET /api/earnings?symbols=A,B` | 앞으로 90일 실적 일정 | `[{symbol, date, hour: "bmo"|"amc"|"dmh"|"", epsEstimate}]` |
+| `GET /api/quotes?symbols=A,B` | 시세 | `{A: {price, change, changePct, prevClose, time, name, stale}}`, 실패 종목은 `error` |
+| `GET /api/news?symbols=A,B` | 최근 7일 뉴스 | `{items: [{symbol, headline, source, url, datetime}], failed: [symbol]}` |
+| `GET /api/earnings?symbols=A,B` | 앞으로 90일 실적 일정 | `{items: [{symbol, date, hour: "bmo"|"amc"|"dmh"|"", epsEstimate}], failed: [symbol]}` |
 | `GET /api/fx` | USD→KRW | `{rate, date, stale}` |
-| `GET /api/market-status` | 장 상태 | `{isOpen, session, nextChange}` |
+| `GET /api/market-status` | 장 상태 | `{isOpen, session}` |
 | `GET /api/health` | 키 설정 여부 등 | `{finnhubKey: "ok"|"missing"|"invalid"}` |
 
 - 모든 오류 응답은 `{error: {code, message}}` 형식이며, `message`는 화면에 그대로 쓸 수 있는 한국어 문장이다.
