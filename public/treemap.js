@@ -69,13 +69,25 @@ export function squarify(items, width, height) {
   return out;
 }
 
-// 한국식 색: 상승 빨강, 하락 파랑. |등락률| 3% 이상이 가장 진하고 0이나 시세 없음은 회색.
+// 종목별 파스텔 배경 → Map(symbol → 'hsl(h, 50%, 88%)').
+// 티커 알파벳 순으로 색상환을 균등하게 나눠 준다. 그래서 새로고침·비중 순위가 바뀌어도
+// 같은 종목은 같은 색이고(종목 추가·삭제 때만 다시 배정), 이웃 색이 한쪽으로 몰리지 않는다.
+const HUE_START = 210; // 첫 색은 차분한 파랑 계열
+
+export function pastelColors(symbols) {
+  const unique = [...new Set(symbols)].sort();
+  const step = 360 / Math.max(unique.length, 1);
+  return new Map(unique.map((s, i) => [s, `hsl(${Math.round(HUE_START + i * step) % 360}, 50%, 88%)`]));
+}
+
+// 등락률 글자색(한국식): 상승 빨강, 하락 파랑. |등락률| 3% 이상이 가장 진하고 0이나 시세 없음은 회색.
+// 파스텔 배경 위에서도 읽히도록 가장 옅은 단계도 충분히 어두운 색을 쓴다.
 const NEUTRAL = [108, 117, 125];
-const UP = [214, 41, 58];
-const DOWN = [31, 95, 209];
+const UP = [176, 18, 32];
+const DOWN = [21, 72, 170];
 const FULL_AT = 0.03;
 
-export function heatColor(changePct) {
+export function changeTextColor(changePct) {
   if (changePct == null || !Number.isFinite(changePct) || changePct === 0) return rgb(NEUTRAL);
   const t = Math.min(Math.abs(changePct) / FULL_AT, 1);
   const target = changePct > 0 ? UP : DOWN;

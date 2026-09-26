@@ -1,8 +1,8 @@
 import { h } from './dom.js';
-import { squarify, heatColor } from '../treemap.js';
+import { squarify, pastelColors, changeTextColor } from '../treemap.js';
 import { formatPct } from '../format.js';
 
-// 평가금액 비중 히트맵. 칸 넓이 = 비중, 색 = 오늘 등락률.
+// 평가금액 비중 트리맵. 칸 넓이 = 비중, 배경 = 종목별 파스텔, 등락률 = 글자색.
 export function createHeatmap(container) {
   let rows = [];
 
@@ -14,8 +14,9 @@ export function createHeatmap(container) {
       return;
     }
     const bySymbol = new Map(priced.map((r) => [r.symbol, r]));
+    const colors = pastelColors(priced.map((r) => r.symbol));
     const rects = squarify(priced.map((r) => ({ id: r.symbol, value: r.marketValue })), width, height);
-    container.replaceChildren(...rects.map((rect) => tile(bySymbol.get(rect.id), rect)));
+    container.replaceChildren(...rects.map((rect) => tile(bySymbol.get(rect.id), rect, colors.get(rect.id))));
   }
 
   new ResizeObserver(() => draw()).observe(container);
@@ -28,24 +29,29 @@ export function createHeatmap(container) {
   };
 }
 
-function tile(r, rect) {
+function tile(r, rect, background) {
   const el = h('div', 'heat-tile');
   Object.assign(el.style, {
     left: `${rect.x}px`,
     top: `${rect.y}px`,
     width: `${rect.w}px`,
     height: `${rect.h}px`,
-    background: heatColor(r.dayChangePct),
+    background,
   });
   el.title = `${r.symbol} · 비중 ${formatPct(r.weight)} · 오늘 ${formatPct(r.dayChangePct, { sign: true })}`;
 
-  const short = Math.min(rect.w, rect.h);
-  if (rect.w < 28 || rect.h < 18) return el; // 너무 작은 칸은 색만, 정보는 마우스를 올리면 보인다
+  // 칸 크기에 따라: 아주 작음 = 색만, 작음 = 티커, 중간 = 티커 + 등락률, 큼 = 티커 + 비중 · 등락률
+  if (rect.w < 28 || rect.h < 18) return el;
   const sym = h('strong', 'heat-sym', r.symbol);
-  sym.style.fontSize = `${Math.max(11, Math.min(24, short / 3.5))}px`;
+  sym.style.fontSize = `${Math.max(11, Math.min(24, Math.min(rect.w, rect.h) / 3.5))}px`;
   el.append(sym);
-  if (rect.w >= 70 && rect.h >= 44) {
-    el.append(h('span', 'heat-sub', `${formatPct(r.weight)} · ${formatPct(r.dayChangePct, { sign: true })}`));
-  }
+  if (rect.w < 44 || rect.h < 34) return el;
+
+  const change = h('span', 'heat-change', formatPct(r.dayChangePct, { sign: true }));
+  change.style.color = changeTextColor(r.dayChangePct);
+  const sub = h('span', 'heat-sub');
+  if (rect.w >= 70 && rect.h >= 44) sub.append(h('span', 'heat-weight', formatPct(r.weight)), ' · ');
+  sub.append(change);
+  el.append(sub);
   return el;
 }
