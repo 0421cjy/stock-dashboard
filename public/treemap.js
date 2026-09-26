@@ -1,4 +1,5 @@
 // 비중 히트맵의 배치(squarified treemap)와 색. DOM에 의존하지 않는 순수 함수.
+import { formatPct } from './format.js';
 
 // items: [{id, value}] → [{id, x, y, w, h}]. 칸 넓이는 value에 비례하고,
 // 칸 모양이 되도록 정사각형에 가깝게 줄을 나눈다(Bruls 외, "Squarified Treemaps").
@@ -69,31 +70,24 @@ export function squarify(items, width, height) {
   return out;
 }
 
-// 종목별 파스텔 배경 → Map(symbol → 'hsl(h, 50%, 88%)').
-// 티커 알파벳 순으로 색상환을 균등하게 나눠 준다. 그래서 새로고침·비중 순위가 바뀌어도
-// 같은 종목은 같은 색이고(종목 추가·삭제 때만 다시 배정), 이웃 색이 한쪽으로 몰리지 않는다.
-const HUE_START = 210; // 첫 색은 차분한 파랑 계열
+// 평면 단색 팔레트. 앞의 넷은 참고 이미지의 청록·파랑·노랑·코랄, 나머지는 같은 톤으로 맞춘 색.
+const PALETTE = [
+  '#14C1D6', '#0A77C2', '#FFC220', '#F76C62', '#2BB673',
+  '#7B5CD6', '#F7931E', '#E8508B', '#0E9F9A', '#3F51B5',
+];
 
-export function pastelColors(symbols) {
+// 종목별 배경색 → Map(symbol → hex). 티커 알파벳 순으로 팔레트를 차례로 배정해서
+// 새로고침·비중 순위가 바뀌어도 같은 종목은 같은 색(종목 추가·삭제 때만 다시 배정).
+export function flatColors(symbols) {
   const unique = [...new Set(symbols)].sort();
-  const step = 360 / Math.max(unique.length, 1);
-  return new Map(unique.map((s, i) => [s, `hsl(${Math.round(HUE_START + i * step) % 360}, 50%, 88%)`]));
+  return new Map(unique.map((s, i) => [s, PALETTE[i % PALETTE.length]]));
 }
 
-// 등락률 글자색(한국식): 상승 빨강, 하락 파랑. |등락률| 3% 이상이 가장 진하고 0이나 시세 없음은 회색.
-// 파스텔 배경 위에서도 읽히도록 가장 옅은 단계도 충분히 어두운 색을 쓴다.
-const NEUTRAL = [108, 117, 125];
-const UP = [176, 18, 32];
-const DOWN = [21, 72, 170];
-const FULL_AT = 0.03;
-
-export function changeTextColor(changePct) {
-  if (changePct == null || !Number.isFinite(changePct) || changePct === 0) return rgb(NEUTRAL);
-  const t = Math.min(Math.abs(changePct) / FULL_AT, 1);
-  const target = changePct > 0 ? UP : DOWN;
-  return rgb(NEUTRAL.map((c, i) => Math.round(c + (target[i] - c) * t)));
-}
-
-function rgb([r, g, b]) {
-  return `rgb(${r}, ${g}, ${b})`;
+// 흰 글자 위의 등락 표시: 방향은 ▲/▼, 크기는 굵기(1% 미만 400, 1~3% 600, 3% 이상 800).
+export function changeMark(changePct) {
+  if (changePct == null || !Number.isFinite(changePct)) return { text: '—', weight: 400 };
+  const abs = Math.abs(changePct);
+  const arrow = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '—';
+  const weight = abs >= 0.03 ? 800 : abs >= 0.01 ? 600 : 400;
+  return { text: `${arrow} ${formatPct(abs)}`, weight };
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { squarify, pastelColors, changeTextColor } from '../public/treemap.js';
+import { squarify, flatColors, changeMark } from '../public/treemap.js';
 
 const EPS = 1e-9;
 const area = (r) => r.w * r.h;
@@ -47,33 +47,26 @@ test('종목이 1개면 영역 전체, 0개거나 값이 0 이하면 빼고 계�
   assert.deepEqual(rects.map((r) => r.id), ['A']);
 });
 
-const hueOf = (color) => Number(/^hsl\((\d{1,3}), 50%, 88%\)$/.exec(color)?.[1]);
-const hueGap = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
-
-test('pastelColors: 순서·비중과 상관없이 같은 종목 구성이면 같은 색', () => {
-  const a = pastelColors(['NVDA', 'AAPL', 'MSFT']);
-  const b = pastelColors(['MSFT', 'NVDA', 'AAPL']);
-  for (const s of ['AAPL', 'MSFT', 'NVDA']) assert.equal(a.get(s), b.get(s));
+test('flatColors: 알파벳 순으로 이미지의 청록·파랑·노랑·코랄부터 배정하고, 순서와 상관없이 같다', () => {
+  const colors = flatColors(['D', 'C', 'B', 'A']);
+  assert.deepEqual(['A', 'B', 'C', 'D'].map((s) => colors.get(s)), ['#14C1D6', '#0A77C2', '#FFC220', '#F76C62']);
+  assert.equal(flatColors(['A', 'B', 'C', 'D']).get('C'), colors.get('C'));
 });
 
-test('pastelColors: 모두 파스텔 형식이고, 색상이 한쪽으로 몰리지 않는다', () => {
-  const symbols = ['AAPL', 'MSFT', 'NVDA', 'VOO', 'SOFI', 'BRK.B', 'QQQ', 'TSLA'];
-  const colors = pastelColors(symbols);
-  const hues = symbols.map((s) => hueOf(colors.get(s)));
-  for (const [i, h] of hues.entries()) assert.ok(h >= 0 && h < 360, `${symbols[i]}: ${colors.get(symbols[i])}`);
-  for (let i = 0; i < hues.length; i++) {
-    for (let j = i + 1; j < hues.length; j++) {
-      assert.ok(hueGap(hues[i], hues[j]) >= 44, `${symbols[i]}와 ${symbols[j]}의 색상이 너무 가깝다`);
-    }
-  }
-  assert.equal(pastelColors(['ONLY']).size, 1);
-  assert.equal(pastelColors([]).size, 0);
+test('flatColors: 10종목까지는 색이 겹치지 않고, 11번째부터 반복한다', () => {
+  const symbols = Array.from({ length: 11 }, (_, i) => `S${String(i).padStart(2, '0')}`);
+  const colors = flatColors(symbols);
+  assert.equal(new Set(symbols.slice(0, 10).map((s) => colors.get(s))).size, 10);
+  assert.equal(colors.get('S10'), colors.get('S00'));
+  assert.equal(flatColors([]).size, 0);
 });
 
-test('changeTextColor: 한국식 글자색, ±3% 이상이 가장 진하고 0·시세 없음은 회색', () => {
-  assert.equal(changeTextColor(0), 'rgb(108, 117, 125)');
-  assert.equal(changeTextColor(null), 'rgb(108, 117, 125)');
-  assert.equal(changeTextColor(0.05), 'rgb(176, 18, 32)');
-  assert.equal(changeTextColor(-0.03), 'rgb(21, 72, 170)');
-  assert.equal(changeTextColor(0.015), 'rgb(142, 68, 79)');
+test('changeMark: ▲/▼ 방향과 굵기 단계(1% 미만 400, 1~3% 600, 3% 이상 800)', () => {
+  assert.deepEqual(changeMark(0.037), { text: '▲ 3.7%', weight: 800 });
+  assert.deepEqual(changeMark(0.03), { text: '▲ 3.0%', weight: 800 });
+  assert.deepEqual(changeMark(-0.013), { text: '▼ 1.3%', weight: 600 });
+  assert.deepEqual(changeMark(0.01), { text: '▲ 1.0%', weight: 600 });
+  assert.deepEqual(changeMark(0.002), { text: '▲ 0.2%', weight: 400 });
+  assert.deepEqual(changeMark(0), { text: '— 0.0%', weight: 400 });
+  assert.deepEqual(changeMark(null), { text: '—', weight: 400 });
 });
