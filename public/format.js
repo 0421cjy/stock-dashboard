@@ -32,8 +32,10 @@ export function formatShares(n) {
   return n.toLocaleString('en-US', { maximumFractionDigits: 4 });
 }
 
+// 로컬 시각을 HH:MM:SS로. 브라우저 언어 설정에 따라 "7시 39분"처럼 바뀌지 않게 직접 만든다.
 export function formatClock(date) {
-  return date.toLocaleTimeString('ko-KR', { hour12: false });
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 // 한국식 색: 상승 up(빨강), 하락 down(파랑)

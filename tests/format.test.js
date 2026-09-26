@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  formatUsd, formatPct, formatKrw, formatShares, signClass, relativeTime, isHttpUrl,
+  formatUsd, formatPct, formatKrw, formatShares, formatClock, signClass, relativeTime, isHttpUrl,
 } from '../public/format.js';
 
 test('formatUsd는 두 자리 소수와 부호를 붙인다', () => {
@@ -38,6 +38,12 @@ test('relativeTime', () => {
   assert.equal(relativeTime(now - 5 * 60_000, now), '5분 전');
   assert.equal(relativeTime(now - 2 * 3_600_000, now), '2시간 전');
   assert.equal(relativeTime(now - 3 * 86_400_000, now), '3일 전');
+});
+
+test('formatClock은 로컬 시각을 HH:MM:SS로 보여준다', () => {
+  assert.equal(formatClock(new Date(2026, 8, 27, 7, 39, 59)), '07:39:59');
+  assert.equal(formatClock(new Date(2026, 8, 27, 14, 5, 0)), '14:05:00');
+  assert.equal(formatClock(new Date(2026, 8, 27, 0, 0, 1)), '00:00:01');
 });
 
 test('isHttpUrl은 http/https만 허용한다', () => {
