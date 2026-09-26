@@ -1,4 +1,5 @@
 import { h } from './dom.js';
+import { ddayTone } from '../dday.js';
 
 export function renderDday(listEl, items, { onEdit }) {
   if (!items.length) {
@@ -7,7 +8,7 @@ export function renderDday(listEl, items, { onEdit }) {
   }
   listEl.replaceChildren(...items.map((item) => {
     const li = h('li');
-    const badge = h('div', `dday-badge${item.days <= 3 ? ' soon' : ''}`, item.label);
+    const badge = h('div', `dday-badge tone-${ddayTone(item.days)}`, item.label);
     const body = h('div');
     body.append(h('div', 'dday-title', item.title));
     for (const line of detailLines(item)) body.append(h('div', 'dday-detail', line));

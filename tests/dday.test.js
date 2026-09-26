@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  dateInZone, addDays, daysBetween, koreaTimeHint, buildDdayList,
+  dateInZone, addDays, daysBetween, koreaTimeHint, buildDdayList, ddayTone,
 } from '../public/dday.js';
 
 test('dateInZone은 시간대별 날짜를 돌려준다', () => {
@@ -61,4 +61,9 @@ test('90일째 일정은 보이고 91일째는 숨긴다', () => {
     ],
   });
   assert.deepEqual(items.map((i) => i.title), ['90일']);
+});
+
+test('ddayTone: 남은 날짜로 배지 색 단계를 정한다', () => {
+  const cases = [[0, 'today'], [1, 'soon'], [3, 'soon'], [4, 'week'], [7, 'week'], [8, 'month'], [30, 'month'], [31, 'later'], [90, 'later']];
+  for (const [days, tone] of cases) assert.equal(ddayTone(days), tone, `D-${days}`);
 });

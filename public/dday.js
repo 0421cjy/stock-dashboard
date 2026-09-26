@@ -34,6 +34,15 @@ export function koreaTimeHint(dateStr, hour) {
   return null;
 }
 
+// 배지 색 단계: 당일 today, 1~3일 soon, 4~7일 week, 8~30일 month, 그 이후 later
+export function ddayTone(days) {
+  if (days <= 0) return 'today';
+  if (days <= 3) return 'soon';
+  if (days <= 7) return 'week';
+  if (days <= 30) return 'month';
+  return 'later';
+}
+
 function ddayLabel(days) {
   return days === 0 ? 'D-DAY' : `D-${days}`;
 }
