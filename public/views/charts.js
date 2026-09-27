@@ -1,7 +1,7 @@
 import { formatUsd } from '../format.js';
 
-const UP = '#d6293a';
-const DOWN = '#1f5fd1';
+const UP = '#c8404c'; // styles.css --up
+const DOWN = '#3a6bc4'; // styles.css --down
 const ZERO_LINE = { color: '#16191f', width: 2 };
 const GRID_LINE = { color: 'rgba(0, 0, 0, 0.1)', width: 1 };
 
@@ -20,6 +20,11 @@ export function createCharts(pnlCanvas) {
     }));
     return { update() {} };
   }
+
+  // 차트 글자도 페이지 글꼴(Pretendard)과 보조 글자색을 따른다
+  Chart.defaults.font.family = getComputedStyle(document.documentElement).fontFamily;
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#6b7280';
 
   const common = { responsive: true, maintainAspectRatio: false, animation: false };
 

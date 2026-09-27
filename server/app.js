@@ -35,7 +35,7 @@ async function collect(symbols, fn) {
   return { items, failed };
 }
 
-export function createApp({ store, finnhub, fx, now = () => new Date(), publicDir, vendorDir }) {
+export function createApp({ store, finnhub, fx, now = () => new Date(), publicDir, vendorDir, fontDir }) {
   const app = express();
 
   // DNS rebinding 방어: 다른 도메인 이름으로 들어온 요청(악성 사이트가 자기 도메인을
@@ -153,6 +153,7 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
   });
 
   app.use('/vendor/chart.js', express.static(vendorDir));
+  if (fontDir) app.use('/vendor/pretendard', express.static(fontDir));
   app.use(express.static(publicDir));
 
   // eslint-disable-next-line no-unused-vars

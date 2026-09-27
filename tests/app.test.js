@@ -51,6 +51,7 @@ async function start({ finnhub = fakeFinnhub(), fx } = {}) {
     now: () => new Date('2026-09-28T14:00:00Z'), // 월요일 뉴욕 10:00
     publicDir: dir,
     vendorDir: dir,
+    fontDir: dir,
   });
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -195,6 +196,13 @@ test('다른 도메인 이름(Host)으로 들어온 요청은 403 (DNS rebinding
   assert.equal(evil.body.error.code, 'FORBIDDEN_HOST');
   assert.equal((await get(`localhost:${ctx.port}`)).status, 200);
   assert.equal((await get(`127.0.0.1:${ctx.port}`)).status, 200);
+});
+
+test('글꼴 파일은 /vendor/pretendard/ 에서 제공한다', async () => {
+  await writeFile(path.join(path.dirname(ctx.filePath), 'font.css'), '@font-face{}', 'utf8');
+  const res = await fetch(`http://127.0.0.1:${ctx.port}/vendor/pretendard/font.css`);
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), '@font-face{}');
 });
 
 test('깨진 저장 파일은 500 STORE_CORRUPT', async () => {

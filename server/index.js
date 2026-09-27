@@ -18,6 +18,7 @@ const app = createApp({
   fx: createFxClient(),
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
+  fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),
 });
 
 const server = http.createServer(app);

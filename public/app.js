@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay } from './calc.js';
-import { formatClock } from './format.js';
+import { statusBadge } from './status.js';
+import { icon } from './icons.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
 
@@ -152,20 +153,19 @@ function renderBanner() {
   el.textContent = message ?? '';
 }
 
+const STATUS_TITLE = {
+  live: '장중 · 30초마다 시세를 갱신합니다',
+  closed: '장이 닫혀 종가 기준입니다 · 자동 갱신을 멈췄습니다',
+  delayed: '최신 시세를 받지 못해 마지막 값을 보여줍니다',
+  loading: '장 상태를 확인하고 있습니다',
+};
+
 function renderStatus() {
   const el = $('status');
-  const clock = state.lastQuoteAt ? formatClock(state.lastQuoteAt) : null;
-  el.classList.remove('warn');
-  if (state.quoteProblem && clock) {
-    el.textContent = `지연 · 마지막 갱신 ${clock}`;
-    el.classList.add('warn');
-  } else if (!state.market) {
-    el.textContent = '장 상태 확인 중';
-  } else if (state.market.isOpen) {
-    el.textContent = clock ? `장중 · ${clock} 갱신 (30초마다)` : '장중';
-  } else {
-    el.textContent = clock ? `장 마감 · 종가 기준 (${clock} 확인)` : '장 마감 · 종가 기준';
-  }
+  const { tone, label } = statusBadge(state);
+  el.className = `status tone-${tone}`;
+  el.textContent = label;
+  el.title = STATUS_TITLE[tone];
 }
 
 function renderSortHeaders() {
@@ -206,6 +206,9 @@ export const handlers = {
 };
 
 function wireControls() {
+  $('refresh-btn').replaceChildren(icon('refresh'));
+  $('add-holding-btn').prepend(icon('plus'));
+  $('add-event-btn').prepend(icon('plus', 14));
   $('refresh-btn').addEventListener('click', () => refreshAll());
   $('add-holding-btn').addEventListener('click', () => handlers.addHolding());
   for (const th of document.querySelectorAll('.holdings th[data-sort]')) {

@@ -1,5 +1,15 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatShares, signClass } from '../format.js';
+import { icon } from '../icons.js';
+
+function iconButton(name, label, className) {
+  const btn = h('button', className);
+  btn.type = 'button';
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+  btn.append(icon(name, 15));
+  return btn;
+}
 
 export function renderHoldings(tbody, rows, { names, onEdit, onDelete }) {
   tbody.replaceChildren(...rows.map((r) => {
@@ -23,8 +33,10 @@ function symbolCell(r, name) {
   const td = h('td', 'sym');
   td.append(h('strong', null, r.symbol));
   if (r.error || r.stale) {
-    const mark = h('span', 'warn-mark', '⚠');
+    const mark = h('span', 'warn-mark');
+    mark.append(icon('alert', 14));
     mark.title = r.stale ? '최신 시세를 받지 못해 마지막 값을 보여줍니다.' : r.error.message;
+    mark.setAttribute('aria-label', mark.title);
     td.append(mark);
   }
   td.append(h('span', 'name', name ?? ''));
@@ -40,11 +52,9 @@ function pnlCell(r) {
 function actionsCell(r, onEdit, onDelete) {
   const td = h('td');
   const box = h('div', 'row-actions');
-  const edit = h('button', null, '수정');
-  edit.type = 'button';
+  const edit = iconButton('pencil', `${r.symbol} 수정`, 'row-edit');
   edit.addEventListener('click', () => onEdit(r));
-  const del = h('button', null, '삭제');
-  del.type = 'button';
+  const del = iconButton('trash', `${r.symbol} 삭제`, 'row-delete');
   del.addEventListener('click', () => onDelete(r));
   box.append(edit, del);
   td.append(box);

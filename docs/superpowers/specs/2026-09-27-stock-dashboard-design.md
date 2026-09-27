@@ -85,6 +85,8 @@
 - **런타임:** Node.js 24 (내장 `fetch`, 내장 테스트 러너 `node:test` 사용)
 - **서버 의존성:** Express
 - **프론트엔드:** 프레임워크 없는 HTML/CSS/ES 모듈 + Chart.js(npm으로 설치해 로컬에서 제공, CDN 미사용)
+- **글꼴:** Pretendard(npm `pretendard`, OFL-1.1)를 로컬에서 제공. 디자인 다듬기(2026-09-27)에서 사용자 승인으로 추가한 세 번째 의존성
+- **아이콘:** Lucide 모양(ISC) 5개를 `public/icons.js`에 SVG로 직접 포함(의존성 아님)
 - **실행:** `npm start` → 콘솔에 `http://127.0.0.1:<PORT>` 출력
 
 ### 폴더 구조
