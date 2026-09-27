@@ -1,12 +1,17 @@
 import { h } from './dom.js';
 import { relativeTime, isHttpUrl } from '../format.js';
 
-export function renderNews(listEl, selectEl, items, { filter, symbols, failed }) {
+export function renderNews(listEl, selectEl, items, { filter, symbols, failed, colors }) {
   syncFilter(selectEl, symbols, filter);
   const shown = filter ? items.filter((n) => n.symbol === filter) : items;
   const rows = shown.map((n) => {
     const li = h('li');
-    li.append(h('div', 'news-meta', `${n.symbol} · ${n.source || '출처 미상'} · ${relativeTime(n.datetime)}`));
+    const meta = h('div', 'news-meta');
+    // 종목 태그: 트리맵 칸과 같은 색
+    const tag = h('span', 'news-tag', n.symbol);
+    tag.style.background = colors.get(n.symbol) ?? 'var(--muted)';
+    meta.append(tag, ` ${n.source || '출처 미상'} · ${relativeTime(n.datetime)}`);
+    li.append(meta);
     if (isHttpUrl(n.url)) {
       const a = h('a', null, n.headline);
       a.href = n.url;

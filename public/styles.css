@@ -125,7 +125,11 @@ button:disabled { opacity: 0.5; cursor: wait; }
 
 .news li { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
 .news li:last-child { border-bottom: none; }
-.news-meta { color: var(--muted); font-size: 12px; }
+.news-meta { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.news-tag {
+  display: inline-block; color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 0.02em;
+  padding: 1px 7px; border-radius: 999px; line-height: 1.5;
+}
 .news a { color: var(--ink); text-decoration: none; line-height: 1.4; }
 .news a:hover { text-decoration: underline; }
 

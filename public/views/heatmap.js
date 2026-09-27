@@ -1,10 +1,11 @@
 import { h } from './dom.js';
-import { squarify, flatColors, tileLabel } from '../treemap.js';
+import { squarify, tileLabel } from '../treemap.js';
 import { formatPct } from '../format.js';
 
-// 평가금액 비중 트리맵. 칸 넓이 = 비중, 배경 = 종목별 단색, 글자 = 티커와 비중(%).
+// 평가금액 비중 트리맵. 칸 넓이 = 비중, 배경 = 종목별 단색(뉴스 태그와 같은 색), 글자 = 티커와 비중(%).
 export function createHeatmap(container) {
   let rows = [];
+  let colors = new Map();
 
   function draw() {
     const { width, height } = container.getBoundingClientRect();
@@ -14,7 +15,6 @@ export function createHeatmap(container) {
       return;
     }
     const bySymbol = new Map(priced.map((r) => [r.symbol, r]));
-    const colors = flatColors(priced.map((r) => r.symbol));
     const rects = squarify(priced.map((r) => ({ id: r.symbol, value: r.marketValue })), width, height);
     container.replaceChildren(...rects.map((rect) => tile(bySymbol.get(rect.id), rect, colors.get(rect.id))));
   }
@@ -22,8 +22,10 @@ export function createHeatmap(container) {
   new ResizeObserver(() => draw()).observe(container);
 
   return {
-    update(next) {
+    // colorMap: 전체 보유 종목 기준 Map(symbol → 색). 뉴스 태그와 같은 지도를 쓴다.
+    update(next, colorMap) {
       rows = next;
+      colors = colorMap;
       draw();
     },
   };

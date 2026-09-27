@@ -4,14 +4,18 @@ import { state, handlers, addRenderer, afterHoldingChange, afterEventChange, ren
 import { openHoldingDialog, openEventDialog, confirmDialog } from './forms.js';
 import { createCharts } from './views/charts.js';
 import { createHeatmap } from './views/heatmap.js';
+import { flatColors } from './treemap.js';
 import { buildDdayList } from './dday.js';
 import { renderDday } from './views/events.js';
 import { renderNews } from './views/news.js';
 
+// 종목별 색: 전체 보유 종목 기준으로 한 번 정해 트리맵과 뉴스 태그가 같은 색을 쓴다.
+const holdingColors = () => flatColors(state.holdings.map((h) => h.symbol));
+
 const heatmap = createHeatmap(document.getElementById('weight-heatmap'));
 const charts = createCharts(document.getElementById('pnl-chart'));
 addRenderer((portfolio) => {
-  heatmap.update(portfolio.rows);
+  heatmap.update(portfolio.rows, holdingColors());
   charts.update(portfolio.rows);
 });
 
@@ -94,5 +98,6 @@ addRenderer(() => {
     filter: state.newsFilter,
     symbols: state.holdings.map((h) => h.symbol),
     failed: state.newsFailed,
+    colors: holdingColors(),
   });
 });
