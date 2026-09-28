@@ -91,3 +91,25 @@ test('깨진 파일은 덮어쓰지 않고 모든 요청을 거부한다', async
   await assert.rejects(store.addHolding({ symbol: 'B', shares: 1, avgCost: 1 }), { code: 'STORE_CORRUPT' });
   assert.equal(await readFile(filePath, 'utf8'), '{ not json');
 });
+
+test('setManualDps: 1주당 연 배당을 직접 저장하고, null이면 지운다', async () => {
+  await store.addHolding({ symbol: 'VOO', shares: 6, avgCost: 500 });
+  assert.deepEqual(await store.setManualDps('voo', 6.8), { symbol: 'VOO', shares: 6, avgCost: 500, manualDps: 6.8 });
+  assert.deepEqual(await store.setManualDps('VOO', 0), { symbol: 'VOO', shares: 6, avgCost: 500, manualDps: 0 });
+  assert.deepEqual(await store.setManualDps('VOO', null), { symbol: 'VOO', shares: 6, avgCost: 500 });
+  assert.deepEqual((await store.read()).holdings, [{ symbol: 'VOO', shares: 6, avgCost: 500 }]);
+});
+
+test('setManualDps: 음수·숫자 아님은 거부, 없는 종목은 NOT_FOUND', async () => {
+  await store.addHolding({ symbol: 'VOO', shares: 6, avgCost: 500 });
+  for (const bad of [-1, NaN, Infinity, '6.8']) {
+    await assert.rejects(store.setManualDps('VOO', bad), { code: 'VALIDATION' });
+  }
+  await assert.rejects(store.setManualDps('QQQ', 1), { code: 'NOT_FOUND' });
+});
+
+test('수량·평단가를 수정해도 직접 넣은 배당은 남는다', async () => {
+  await store.addHolding({ symbol: 'VOO', shares: 6, avgCost: 500 });
+  await store.setManualDps('VOO', 6.8);
+  assert.equal((await store.updateHolding('VOO', { shares: 7, avgCost: 510 })).manualDps, 6.8);
+});

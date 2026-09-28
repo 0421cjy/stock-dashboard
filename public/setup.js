@@ -1,13 +1,15 @@
 // 화면 영역(대화상자·차트·디데이·뉴스)을 app.js에 연결한다.
 import { api } from './api.js';
 import { state, handlers, addRenderer, afterHoldingChange, afterEventChange, render, notify } from './app.js';
-import { openHoldingDialog, openEventDialog, confirmDialog } from './forms.js';
+import { openHoldingDialog, openEventDialog, openDpsDialog, confirmDialog } from './forms.js';
 import { createCharts } from './views/charts.js';
 import { createHeatmap } from './views/heatmap.js';
 import { flatColors } from './treemap.js';
 import { buildDdayList } from './dday.js';
 import { renderDday } from './views/events.js';
 import { renderNews } from './views/news.js';
+import { computeDividends } from './dividends.js';
+import { renderDividends } from './views/dividends.js';
 
 // 종목별 색: 전체 보유 종목 기준으로 한 번 정해 트리맵과 뉴스 태그가 같은 색을 쓴다.
 const holdingColors = () => flatColors(state.holdings.map((h) => h.symbol));
@@ -100,4 +102,32 @@ addRenderer(() => {
     failed: state.newsFailed,
     colors: holdingColors(),
   });
+});
+
+// 배당금 카드. 직접 입력은 저장 후 보유 종목만 다시 읽으면 된다(배당 지표는 그대로).
+function editDps(row) {
+  const holding = state.holdings.find((h) => h.symbol === row.symbol);
+  if (!holding) return;
+  openDpsDialog({
+    symbol: holding.symbol,
+    current: holding.manualDps ?? null,
+    onSubmit: async (value) => {
+      await api.setManualDps(holding.symbol, value);
+      await afterEventChange(); // 보유 종목 다시 읽고 다시 그리기
+      notify(value == null ? `${holding.symbol} 직접 입력을 지웠습니다.` : `${holding.symbol} 배당을 저장했습니다.`);
+    },
+  });
+}
+
+addRenderer(() => {
+  const result = computeDividends(state.holdings, state.dividends, state.quotes);
+  renderDividends(
+    {
+      summaryEl: document.getElementById('dividend-summary'),
+      bodyEl: document.getElementById('dividend-body'),
+      footEl: document.getElementById('dividend-foot'),
+    },
+    result,
+    { fxRate: state.fx?.rate, hasHoldings: state.holdings.length > 0, onEdit: editDps },
+  );
 });

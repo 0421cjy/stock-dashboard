@@ -36,6 +36,8 @@ export const api = {
   quotes: (symbols) => call('GET', `/api/quotes?symbols=${list(symbols)}`),
   news: (symbols) => call('GET', `/api/news?symbols=${list(symbols)}`),
   earnings: (symbols) => call('GET', `/api/earnings?symbols=${list(symbols)}`),
+  dividends: (symbols) => call('GET', `/api/dividends?symbols=${list(symbols)}`),
+  setManualDps: (symbol, manualDps) => call('PUT', `/api/holdings/${seg(symbol)}/dividend`, { manualDps }),
   fx: () => call('GET', '/api/fx'),
   marketStatus: () => call('GET', '/api/market-status'),
 };

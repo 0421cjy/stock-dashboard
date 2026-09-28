@@ -90,6 +90,36 @@ export function openEventDialog({ event = null, onSubmit, onDelete }) {
   title.focus();
 }
 
+// 1주당 연 배당 직접 입력. onSubmit(숫자) 또는 onSubmit(null: 입력 지우기).
+export function openDpsDialog({ symbol, current = null, onSubmit }) {
+  const dialog = $('dps-dialog');
+  const input = $('dps-value');
+  const errorEl = $('dps-error');
+  const clear = $('dps-clear');
+
+  $('dps-title').textContent = `${symbol} 배당 직접 입력`;
+  input.value = current ?? '';
+  errorEl.hidden = true;
+  clear.hidden = current == null;
+  clear.onclick = async () => {
+    try {
+      await onSubmit(null);
+      dialog.close();
+    } catch (err) {
+      showError(errorEl, err.message);
+    }
+  };
+
+  bindSubmit($('dps-form'), dialog, $('dps-save'), errorEl, () => {
+    const value = parseAmount(input.value);
+    if (!(value >= 0)) return { error: '0 이상의 숫자로 입력해주세요. (예: 6.80) 배당이 없으면 0을 넣으세요.' };
+    return { submit: () => onSubmit(value) };
+  });
+
+  dialog.showModal();
+  input.focus();
+}
+
 // 결과는 버튼 제출(submit)과 Esc(cancel)로 받는다. close 이벤트는 화면이 그려지지 않는
 // 창(숨겨진 탭 등)에서 늦거나 오지 않을 수 있어서 쓰지 않는다.
 export function confirmDialog(message) {

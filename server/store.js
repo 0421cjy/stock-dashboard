@@ -127,6 +127,21 @@ export function createStore({ filePath, idGen = defaultId }) {
       });
     },
 
+    // ETF처럼 자동 배당 데이터가 없는 종목의 1주당 연 배당. null이면 지우고 자동 값으로 돌아간다.
+    async setManualDps(rawSymbol, dps) {
+      const symbol = normalizeSymbol(rawSymbol);
+      if (dps !== null && (typeof dps !== 'number' || !Number.isFinite(dps) || dps < 0)) {
+        throw invalid('1주당 연 배당은 0 이상의 숫자여야 합니다.');
+      }
+      return mutate((data) => {
+        const holding = data.holdings.find((h) => h.symbol === symbol);
+        if (!holding) throw holdingNotFound();
+        if (dps === null) delete holding.manualDps;
+        else holding.manualDps = dps;
+        return holding;
+      });
+    },
+
     async addEvent(input = {}) {
       const fields = validateEvent(input);
       return mutate((data) => {

@@ -13,11 +13,12 @@ export function formatUsd(n, { sign = false } = {}) {
   return sign ? `+${body}` : body;
 }
 
-export function formatPct(ratio, { sign = false } = {}) {
+export function formatPct(ratio, { sign = false, digits = 1 } = {}) {
   if (ratio == null || !Number.isFinite(ratio)) return '—';
   const pct = ratio * 100;
-  if (Math.abs(pct) < 0.05) return '0.0%';
-  const body = `${Math.abs(pct).toFixed(1)}%`;
+  // 표시 자릿수에서 0으로 반올림되는 값은 부호 없이 0으로
+  if (Math.abs(pct) < 0.5 / 10 ** digits) return `${(0).toFixed(digits)}%`;
+  const body = `${Math.abs(pct).toFixed(digits)}%`;
   if (pct < 0) return MINUS + body;
   return sign ? `+${body}` : body;
 }

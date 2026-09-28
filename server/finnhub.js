@@ -8,6 +8,7 @@ const TTL = {
   news: 1_800_000,
   earnings: 21_600_000,
   holidays: 86_400_000,
+  dividends: 86_400_000,
 };
 const FIRST_BACKOFF = 5_000;
 const MAX_BACKOFF = 60_000;
@@ -118,6 +119,22 @@ export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Da
         return (data?.earningsCalendar ?? [])
           .filter((e) => e.symbol === symbol && e.date)
           .map((e) => ({ symbol, date: e.date, hour: e.hour ?? '', epsEstimate: e.epsEstimate ?? null }));
+      });
+    },
+
+    // 배당 지표(무료): 1주당 연 배당(예정 배당 → 없으면 최근 12개월)과 5년 배당 성장률.
+    // ETF는 지표가 비어 있어 annualDps가 null이다. 배당을 안 주는 종목은 0.
+    dividendMetrics(symbol) {
+      return cache.get(`dividend:${symbol}`, TTL.dividends, async () => {
+        const m = (await request('/stock/metric', { symbol, metric: 'all' }))?.metric ?? {};
+        const num = (v) => (Number.isFinite(v) ? v : null);
+        const indicated = num(m.dividendIndicatedAnnual);
+        const fiscal = num(m.dividendPerShareAnnual);
+        let annualDps = indicated ?? fiscal ?? num(m.dividendPerShareTTM);
+        // 예정 배당이 지난 회계연도 배당과 3배 넘게 다르면 데이터 오류로 보고 회계연도 값을 쓴다
+        // (예: NVDA 예정 1.00 vs 회계연도 0.0399). 예정 0(배당 중단)은 그대로 둔다.
+        if (indicated > 0 && fiscal > 0 && Math.max(indicated / fiscal, fiscal / indicated) > 3) annualDps = fiscal;
+        return { symbol, annualDps, growth5y: num(m.dividendGrowthRate5Y) };
       });
     },
 

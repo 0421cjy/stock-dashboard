@@ -173,3 +173,37 @@ test('holidays: 날짜와 거래 시간', async () => {
   });
   assert.deepEqual((await fh.holidays()).value, [{ date: '2026-11-26', tradingHour: '' }]);
 });
+
+test('dividendMetrics: 1주당 연 배당과 5년 성장률을 바꿔 담는다(배당률은 화면에서 현재가로 계산)', async () => {
+  const body = { metric: { dividendIndicatedAnnual: 3.92, dividendPerShareTTM: 3.559, dividendYieldIndicatedAnnual: 0.79485, dividendGrowthRate5Y: 10.2, beta: 0.9 } };
+  const fetch = fakeFetch(() => ({ body }));
+  const fh = createFinnhubClient({ apiKey: 'k', fetch, now: clock() });
+  assert.deepEqual((await fh.dividendMetrics('MSFT')).value, { symbol: 'MSFT', annualDps: 3.92, growth5y: 10.2 });
+  const { url } = fetch.calls[0];
+  assert.equal(url.pathname, '/api/v1/stock/metric');
+  assert.equal(url.searchParams.get('metric'), 'all');
+});
+
+test('dividendMetrics: 예정 배당이 없으면 최근 12개월 배당, 둘 다 없으면(ETF) null', async () => {
+  let body = { metric: { dividendPerShareTTM: 1.06 } };
+  const fh = createFinnhubClient({ apiKey: 'k', fetch: fakeFetch(() => ({ body })), now: clock() });
+  assert.equal((await fh.dividendMetrics('AAPL')).value.annualDps, 1.06);
+  body = { metric: {} };
+  assert.deepEqual((await fh.dividendMetrics('VOO')).value, { symbol: 'VOO', annualDps: null, growth5y: null });
+});
+
+test('dividendMetrics: 배당을 안 주는 종목은 0', async () => {
+  const fh = createFinnhubClient({ apiKey: 'k', fetch: fakeFetch(() => ({ body: { metric: { dividendIndicatedAnnual: 0, dividendPerShareTTM: 0 } } })), now: clock() });
+  assert.equal((await fh.dividendMetrics('SOFI')).value.annualDps, 0);
+});
+
+test('dividendMetrics: 예정 배당이 지난 회계연도 배당과 3배 넘게 다르면 오류로 보고 회계연도 값을 쓴다', async () => {
+  // 실제 Finnhub NVDA 응답(2026-09-29): 예정 1.00, 회계연도 0.0399, 12개월 0.2795 — 실제 배당은 연 약 0.04
+  let body = { metric: { dividendIndicatedAnnual: 1, dividendPerShareAnnual: 0.0399, dividendPerShareTTM: 0.2795 } };
+  const fh = createFinnhubClient({ apiKey: 'k', fetch: fakeFetch(() => ({ body })), now: clock() });
+  assert.equal((await fh.dividendMetrics('NVDA')).value.annualDps, 0.0399);
+  body = { metric: { dividendIndicatedAnnual: 1.08, dividendPerShareAnnual: 1.0318 } };
+  assert.equal((await fh.dividendMetrics('AAPL')).value.annualDps, 1.08, '차이가 작으면 예정 배당을 쓴다');
+  body = { metric: { dividendIndicatedAnnual: 0, dividendPerShareAnnual: 0.5 } };
+  assert.equal((await fh.dividendMetrics('CUT')).value.annualDps, 0, '배당을 없앤 경우(예정 0)는 0');
+});

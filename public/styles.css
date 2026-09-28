@@ -278,3 +278,18 @@ dialog input { background: var(--bg); font: inherit; font-size: var(--fs-md); pa
 .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .spacer { flex: 1; }
 .form-error { color: var(--danger); margin: 0; font-size: var(--fs-sm); }
+
+/* 배당금 카드 */
+.div-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.div-stat { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.div-stat-label { color: var(--muted); font-size: 13px; font-weight: 600; }
+.div-stat-value { font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.div-stat-sub { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.dividends td.strong { font-weight: 700; font-size: 15px; }
+.src-tag {
+  display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px;
+  background: var(--status-bg); color: var(--status-ink); vertical-align: 1px;
+}
+.dividends tr.is-missing .missing-note { color: var(--muted); text-align: left; font-size: 13px; }
+.dps-input-btn { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.dialog-hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }

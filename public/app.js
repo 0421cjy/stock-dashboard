@@ -26,6 +26,7 @@ export const state = {
   news: [],
   newsFailed: [],
   earnings: [],
+  dividends: {}, // { SYMBOL: { annualDps, growth5y } }
   fx: null,
   market: null,
   keyStatus: 'ok',
@@ -87,10 +88,12 @@ async function refreshHealth() {
 
 async function refreshSlow() {
   const list = symbols();
-  const [news, earnings, fx] = await Promise.allSettled([
-    list.length ? api.news(list) : Promise.resolve({ items: [], failed: [] }),
-    list.length ? api.earnings(list) : Promise.resolve({ items: [], failed: [] }),
+  const empty = Promise.resolve({ items: [], failed: [] });
+  const [news, earnings, fx, dividends] = await Promise.allSettled([
+    list.length ? api.news(list) : empty,
+    list.length ? api.earnings(list) : empty,
     api.fx(),
+    list.length ? api.dividends(list) : empty,
   ]);
   if (news.status === 'fulfilled') {
     state.news = keepFailed(state.news, news.value).sort((a, b) => b.datetime - a.datetime);
@@ -100,9 +103,15 @@ async function refreshSlow() {
     state.earnings = keepFailed(state.earnings, earnings.value).sort((a, b) => a.date.localeCompare(b.date));
   }
   if (fx.status === 'fulfilled') state.fx = fx.value;
+  if (dividends.status === 'fulfilled') {
+    // 가져오지 못한 종목은 이전 값을 유지한다
+    const next = Object.fromEntries(dividends.value.failed.filter((s) => state.dividends[s]).map((s) => [s, state.dividends[s]]));
+    for (const d of dividends.value.items) next[d.symbol] = d;
+    state.dividends = next;
+  }
 
   // 일부 종목을 못 가져왔으면(대개 호출 한도) 30분을 기다리지 않고 1분 뒤 한 번 더 시도한다.
-  const failedSome = [news, earnings].some((r) => r.status === 'rejected' || r.value.failed.length);
+  const failedSome = [news, earnings, dividends].some((r) => r.status === 'rejected' || r.value.failed.length);
   if (failedSome && !slowRetryTimer) {
     slowRetryTimer = setTimeout(async () => {
       slowRetryTimer = null;

@@ -33,6 +33,10 @@ function fakeFinnhub(overrides = {}) {
       return { value: [{ symbol: s, date: s === 'AAA' ? '2026-11-05' : '2026-10-27', hour: 'bmo', epsEstimate: 0.1 }], stale: false };
     },
     async holidays() { return { value: [], stale: false }; },
+    async dividendMetrics(s) {
+      if (s === 'BAD') throw new AppError('UPSTREAM', 'x', 502);
+      return { value: { symbol: s, annualDps: s === 'VOO' ? null : 1, growth5y: s === 'VOO' ? null : 5 }, stale: false };
+    },
     ...overrides,
   };
 }
@@ -211,4 +215,25 @@ test('깨진 저장 파일은 500 STORE_CORRUPT', async () => {
   const r = await ctx.call('GET', '/api/portfolio');
   assert.equal(r.status, 500);
   assert.equal(r.body.error.code, 'STORE_CORRUPT');
+});
+
+test('배당 지표: 종목별로 모으고 실패 종목을 알려준다', async () => {
+  const r = await ctx.call('GET', '/api/dividends?symbols=AAA,VOO,BAD');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.items, [
+    { symbol: 'AAA', annualDps: 1, growth5y: 5 },
+    { symbol: 'VOO', annualDps: null, growth5y: null },
+  ]);
+  assert.deepEqual(r.body.failed, ['BAD']);
+});
+
+test('직접 입력 배당: 저장·지우기, 잘못된 값은 400', async () => {
+  await ctx.call('POST', '/api/holdings', { symbol: 'VOO', shares: 6, avgCost: 500 });
+  const set = await ctx.call('PUT', '/api/holdings/voo/dividend', { manualDps: 6.8 });
+  assert.equal(set.status, 200);
+  assert.equal(set.body.manualDps, 6.8);
+  const cleared = await ctx.call('PUT', '/api/holdings/VOO/dividend', { manualDps: null });
+  assert.equal('manualDps' in cleared.body, false);
+  assert.equal((await ctx.call('PUT', '/api/holdings/VOO/dividend', { manualDps: -1 })).status, 400);
+  assert.equal((await ctx.call('PUT', '/api/holdings/VOO/dividend', {})).status, 400);
 });

@@ -60,3 +60,11 @@ test('formatKrwFromUsd: 달러 × 환율을 원화로, 부호와 환율 없음 �
   assert.equal(formatKrwFromUsd(100, null), '₩ —');
   assert.equal(formatKrwFromUsd(null, 1400), '₩ —');
 });
+
+test('formatPct: digits 옵션으로 소수 자릿수를 정한다(배당률처럼 작은 값)', () => {
+  assert.equal(formatPct(0.00017, { digits: 2 }), '0.02%');
+  assert.equal(formatPct(0.0079485, { digits: 2 }), '0.79%');
+  assert.equal(formatPct(0.00004, { digits: 2 }), '0.00%');
+  assert.equal(formatPct(0.102, { sign: true, digits: 2 }), '+10.20%');
+  assert.equal(formatPct(0.00017), '0.0%', '기본은 그대로 소수 첫째 자리');
+});

@@ -80,6 +80,11 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
     res.json(await store.updateHolding(req.params.symbol, req.body ?? {}));
   });
 
+  // ETF 등 자동 배당 데이터가 없는 종목의 1주당 연 배당 직접 입력. null이면 지운다.
+  app.put('/api/holdings/:symbol/dividend', async (req, res) => {
+    res.json(await store.setManualDps(req.params.symbol, req.body?.manualDps));
+  });
+
   app.delete('/api/holdings/:symbol', async (req, res) => {
     await store.removeHolding(req.params.symbol);
     res.status(204).end();
@@ -130,6 +135,11 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
     const to = addDays(from, EARNINGS_DAYS);
     const result = await collect(parseSymbols(req.query.symbols), (s) => finnhub.earnings(s, { from, to }));
     result.items.sort((a, b) => a.date.localeCompare(b.date));
+    res.json(result);
+  });
+
+  app.get('/api/dividends', async (req, res) => {
+    const result = await collect(parseSymbols(req.query.symbols), async (s) => ({ value: [(await finnhub.dividendMetrics(s)).value] }));
     res.json(result);
   });
 
