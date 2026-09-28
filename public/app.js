@@ -2,6 +2,7 @@ import { api } from './api.js';
 import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay } from './calc.js';
 import { statusBadge } from './status.js';
 import { icon } from './icons.js';
+import { normalizeThemePref, nextThemePref, THEME_LABEL } from './theme.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
 
@@ -206,6 +207,36 @@ export const handlers = {
   deleteHolding: () => {},
 };
 
+// 테마: 자동(윈도우 설정) / 라이트 / 다크. 선택은 이 브라우저에만 저장한다.
+const THEME_ICON = { system: 'monitor', light: 'sun', dark: 'moon' };
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function readThemePref() {
+  try { return normalizeThemePref(localStorage.getItem('theme')); } catch { return 'system'; }
+}
+
+function applyThemePref(pref) {
+  const root = document.documentElement;
+  if (pref === 'system') delete root.dataset.theme;
+  else root.dataset.theme = pref;
+  const btn = $('theme-btn');
+  btn.replaceChildren(icon(THEME_ICON[pref]));
+  btn.title = `${THEME_LABEL[pref]} · 누르면 바뀝니다`;
+  btn.setAttribute('aria-label', btn.title);
+  render(); // 차트는 그릴 때 현재 테마 색을 읽는다
+}
+
+function wireTheme() {
+  applyThemePref(readThemePref());
+  $('theme-btn').addEventListener('click', () => {
+    const next = nextThemePref(readThemePref());
+    try { localStorage.setItem('theme', next); } catch { /* 저장 못 해도 이번 화면에는 적용 */ }
+    applyThemePref(next);
+  });
+  // 자동일 때 윈도우 설정이 바뀌면 CSS는 알아서 바뀌고, 차트만 다시 그린다
+  systemDark.addEventListener('change', () => render());
+}
+
 function wireControls() {
   $('refresh-btn').replaceChildren(icon('refresh'));
   $('add-holding-btn').prepend(icon('plus'));
@@ -240,6 +271,7 @@ function startSchedulers() {
 async function main() {
   wireControls();
   await import('./setup.js');
+  wireTheme();
   await refreshAll();
   startSchedulers();
 }

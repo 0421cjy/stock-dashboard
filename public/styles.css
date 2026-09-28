@@ -15,8 +15,25 @@
   --warn-bg: #fff4e5;
   --live: #1e7a3c;
   --live-bg: #e7f6ec;
+  --ink-2: #4b5563;
+  --primary-bg: #1f3a8a;
+  --primary-hover: #1a3178;
+  --row-hover: #eef3fb;
+  --action-hover: #dfe7f5;
+  --danger-bg: #fbe4e6;
+  --warn-border: #fcd9a8;
+  --status-bg: #f1f3f5;
+  --status-ink: #4b5563;
+  --toast-bg: #111827;
+  --toast-ink: #ffffff;
+  --chart-grid: rgba(0, 0, 0, 0.1);
+  --tone-soon-bg: #fde8ea;  --tone-soon-line: #f5c2c7;  --tone-soon-ink: #a3212c;
+  --tone-week-bg: #fff1e0;  --tone-week-line: #fad7a8;  --tone-week-ink: #9a4a06;
+  --tone-month-bg: #e8f0fb; --tone-month-line: #c3d5f2; --tone-month-ink: #1f4fa8;
+  --tone-later-bg: #f1f3f5; --tone-later-line: #dde1e6; --tone-later-ink: #5b6472;
   --radius: 12px;
   --shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
+  color-scheme: light;
 
   /* 글자 크기 단계: 13 / 14 / 16 / 18 / 20 / 34 */
   --fs-xs: 13px;
@@ -32,8 +49,49 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* 다크 테마: 자동(윈도우 다크)일 때와 직접 다크를 골랐을 때 같은 값을 쓴다.
+   (data-theme 속성은 theme.js가 붙인다. light를 고르면 윈도우가 다크여도 라이트로 남는다) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --card: #171b22; --ink: #e6e8ec; --ink-2: #c4c9d2; --muted: #9aa3b2; --subtle: #6b7483;
+    --line: #262c36; --line-strong: #343b47; --hover: #1f2530;
+    --accent: #7c9cf5; --primary-bg: #3b5bd1; --primary-hover: #4a69dc;
+    --up: #ef6b75; --down: #6c9cf0;
+    --warn: #f0a24b; --warn-bg: #2e2415; --warn-border: #5a4320;
+    --live: #5fd18b; --live-bg: #15301f;
+    --row-hover: #1c2433; --action-hover: #2a3446; --danger-bg: #3a2227;
+    --status-bg: #222833; --status-ink: #b3bac5;
+    --toast-bg: #e6e8ec; --toast-ink: #111827;
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --tone-soon-bg: #3a2227;  --tone-soon-line: #5c2e35;  --tone-soon-ink: #f28b93;
+    --tone-week-bg: #33271a;  --tone-week-line: #5a4320;  --tone-week-ink: #f0b36b;
+    --tone-month-bg: #1c2a44; --tone-month-line: #2d4470; --tone-month-ink: #8fb0f5;
+    --tone-later-bg: #222833; --tone-later-line: #343b47; --tone-later-ink: #9aa3b2;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --card: #171b22; --ink: #e6e8ec; --ink-2: #c4c9d2; --muted: #9aa3b2; --subtle: #6b7483;
+  --line: #262c36; --line-strong: #343b47; --hover: #1f2530;
+  --accent: #7c9cf5; --primary-bg: #3b5bd1; --primary-hover: #4a69dc;
+  --up: #ef6b75; --down: #6c9cf0;
+  --warn: #f0a24b; --warn-bg: #2e2415; --warn-border: #5a4320;
+  --live: #5fd18b; --live-bg: #15301f;
+  --row-hover: #1c2433; --action-hover: #2a3446; --danger-bg: #3a2227;
+  --status-bg: #222833; --status-ink: #b3bac5;
+  --toast-bg: #e6e8ec; --toast-ink: #111827;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --tone-soon-bg: #3a2227;  --tone-soon-line: #5c2e35;  --tone-soon-ink: #f28b93;
+  --tone-week-bg: #33271a;  --tone-week-line: #5a4320;  --tone-week-ink: #f0b36b;
+  --tone-month-bg: #1c2a44; --tone-month-line: #2d4470; --tone-month-ink: #8fb0f5;
+  --tone-later-bg: #222833; --tone-later-line: #343b47; --tone-later-ink: #9aa3b2;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); line-height: 1.45; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.45; }
 h1 { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.01em; margin: 0; }
 h2 { font-size: var(--fs-title); font-weight: 700; margin: 0 0 12px; letter-spacing: -0.005em; }
 
@@ -46,8 +104,8 @@ button {
 }
 button:hover { background: var(--hover); border-color: var(--line-strong); }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.primary:hover { background: #1a3178; }
+button.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: #fff; }
+button.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 button.danger { background: var(--up); border-color: var(--up); color: #fff; }
 button.danger-text { color: var(--up); border-color: transparent; background: none; }
 button.icon { width: 34px; height: 34px; padding: 0; }
@@ -60,10 +118,10 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .down { color: var(--down); }
 .flat { color: var(--ink); }
 
-.banner { background: var(--warn-bg); color: var(--warn); border-bottom: 1px solid #fcd9a8; padding: 10px 24px; font-size: var(--fs-sm); }
+.banner { background: var(--warn-bg); color: var(--warn); border-bottom: 1px solid var(--warn-border); padding: 10px 24px; font-size: var(--fs-sm); }
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 10;
+  background: var(--toast-bg); color: var(--toast-ink); padding: 10px 16px; border-radius: 10px; z-index: 10;
   font-size: var(--fs-sm); box-shadow: 0 8px 24px rgb(16 24 40 / 0.18);
 }
 
@@ -78,7 +136,7 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .status {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 5px 11px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 600;
-  background: #f1f3f5; color: #4b5563; letter-spacing: 0.01em;
+  background: var(--status-bg); color: var(--status-ink); letter-spacing: 0.01em;
 }
 .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .status.tone-live { background: var(--live-bg); color: var(--live); }
@@ -114,7 +172,7 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .tile-pct { font-size: var(--fs-title); font-weight: 600; margin-left: 8px; letter-spacing: 0; }
 .tile-sub { color: var(--muted); font-size: var(--fs-sm); margin-top: 6px; }
 .tile-krw { font-size: var(--fs-md); font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.tile-krw.flat { color: #4b5563; }
+.tile-krw.flat { color: var(--ink-2); }
 
 /* 보유 종목 표 */
 .table-wrap { overflow-x: auto; }
@@ -132,7 +190,7 @@ button:disabled { opacity: 0.5; cursor: wait; }
 /* 마우스를 올린 행(또는 키보드로 행 안 버튼에 들어온 행)을 강조 */
 .holdings tbody td { transition: background-color 0.1s ease, box-shadow 0.1s ease; }
 .holdings tbody tr:hover td,
-.holdings tbody tr:focus-within td { background: #eef3fb; }
+.holdings tbody tr:focus-within td { background: var(--row-hover); }
 .holdings tbody tr:hover td:first-child,
 .holdings tbody tr:focus-within td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 @media (prefers-reduced-motion: reduce) { .holdings tbody td { transition: none; } }
@@ -145,8 +203,8 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .holdings tbody tr:hover .row-actions,
 .holdings tbody tr:focus-within .row-actions { opacity: 1; }
 .row-actions button { width: 30px; height: 30px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
-.row-actions button:hover { background: #dfe7f5; color: var(--ink); }
-.row-actions button.row-delete:hover { background: #fbe4e6; color: var(--up); }
+.row-actions button:hover { background: var(--action-hover); color: var(--ink); }
+.row-actions button.row-delete:hover { background: var(--danger-bg); color: var(--up); }
 @media (prefers-reduced-motion: reduce) { .row-actions { transition: none; } }
 
 /* 차트 */
@@ -155,9 +213,9 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .chart-empty { color: var(--muted); }
 .h2-sub { color: var(--muted); font-size: var(--fs-xs); font-weight: 500; margin-left: 6px; }
 
-.heatmap { position: relative; height: 260px; overflow: hidden; background: #fff; border-radius: 6px; }
+.heatmap { position: relative; height: 260px; overflow: hidden; background: var(--card); border-radius: 6px; }
 .heat-tile {
-  position: absolute; box-sizing: border-box; border: 2px solid #fff;
+  position: absolute; box-sizing: border-box; border: 2px solid var(--card);
   display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px;
   color: #fff; text-align: left; overflow: hidden; padding: 10px 12px; line-height: 1.2; cursor: default;
   /* 노랑·청록처럼 밝은 배경에서도 흰 글자가 읽히도록 옅은 그림자 */
@@ -177,10 +235,10 @@ button:disabled { opacity: 0.5; cursor: wait; }
 }
 /* 남은 날짜 단계별 배지 색 (dday.js의 ddayTone) */
 .dday-badge.tone-today { background: var(--up); border-color: var(--up); color: #fff; }
-.dday-badge.tone-soon { background: #fde8ea; border-color: #f5c2c7; color: #a3212c; }
-.dday-badge.tone-week { background: #fff1e0; border-color: #fad7a8; color: #9a4a06; }
-.dday-badge.tone-month { background: #e8f0fb; border-color: #c3d5f2; color: #1f4fa8; }
-.dday-badge.tone-later { background: #f1f3f5; border-color: #dde1e6; color: #5b6472; }
+.dday-badge.tone-soon { background: var(--tone-soon-bg); border-color: var(--tone-soon-line); color: var(--tone-soon-ink); }
+.dday-badge.tone-week { background: var(--tone-week-bg); border-color: var(--tone-week-line); color: var(--tone-week-ink); }
+.dday-badge.tone-month { background: var(--tone-month-bg); border-color: var(--tone-month-line); color: var(--tone-month-ink); }
+.dday-badge.tone-later { background: var(--tone-later-bg); border-color: var(--tone-later-line); color: var(--tone-later-ink); }
 .dday-title { font-weight: 700; font-size: 14px; }
 .dday-detail { color: var(--muted); font-size: 12px; line-height: 1.45; }
 .dday-edit { border: none; padding: 0; background: none; color: var(--accent); font-size: var(--fs-xs); font-weight: 600; margin-top: 2px; }
@@ -200,11 +258,11 @@ button:disabled { opacity: 0.5; cursor: wait; }
 select { font: inherit; font-size: var(--fs-xs); padding: 4px 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--card); color: var(--ink); }
 
 /* 대화상자 */
-dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; width: min(380px, 92vw); box-shadow: 0 16px 40px rgb(16 24 40 / 0.18); }
+dialog { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; width: min(380px, 92vw); box-shadow: 0 16px 40px rgb(16 24 40 / 0.18); }
 dialog::backdrop { background: rgb(15 23 42 / 0.35); }
 dialog form { display: flex; flex-direction: column; gap: 12px; }
 dialog label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
-dialog input { font: inherit; font-size: var(--fs-md); padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink); }
+dialog input { background: var(--bg); font: inherit; font-size: var(--fs-md); padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink); }
 .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .spacer { flex: 1; }
 .form-error { color: var(--up); margin: 0; font-size: var(--fs-sm); }

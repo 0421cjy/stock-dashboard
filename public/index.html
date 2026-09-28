@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>내 포트폴리오</title>
+  <script>
+    // 화면을 그리기 전에 저장된 테마를 적용해, 다크 모드에서 흰 화면이 번쩍이지 않게 한다.
+    try {
+      const t = localStorage.getItem('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch { /* 저장소를 못 쓰면 자동(윈도우 설정) */ }
+  </script>
   <link rel="stylesheet" href="/vendor/pretendard/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="/styles.css">
   <script src="/vendor/chart.js/chart.umd.js"></script>
@@ -17,6 +24,7 @@
     <h1>내 포트폴리오</h1>
     <div class="topbar-right">
       <span id="status" class="status tone-loading" role="status">불러오는 중…</span>
+      <button id="theme-btn" type="button" class="icon"></button>
       <button id="refresh-btn" type="button" class="icon" title="지금 새로고침" aria-label="지금 새로고침"></button>
       <button id="add-holding-btn" type="button" class="primary">종목 추가</button>
     </div>
