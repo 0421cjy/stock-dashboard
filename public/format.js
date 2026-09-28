@@ -27,6 +27,16 @@ export function formatKrw(n) {
   return `₩${Math.round(n).toLocaleString('en-US')}`;
 }
 
+// 달러 금액을 원화로 바꿔 보여준다(기준환율). 환율이나 금액이 없으면 '₩ —'.
+export function formatKrwFromUsd(usd, rate, { sign = false } = {}) {
+  if (usd == null || !Number.isFinite(usd) || !(rate > 0)) return '₩ —';
+  const won = Math.round(usd * rate);
+  if (won === 0) return '₩0';
+  const body = `₩${Math.abs(won).toLocaleString('en-US')}`;
+  if (won < 0) return MINUS + body;
+  return sign ? `+${body}` : body;
+}
+
 export function formatShares(n) {
   if (n == null || !Number.isFinite(n)) return '—';
   return n.toLocaleString('en-US', { maximumFractionDigits: 4 });

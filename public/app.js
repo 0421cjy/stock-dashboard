@@ -191,6 +191,7 @@ export function render() {
   });
   renderHoldings($('holdings-body'), sortRows(portfolio.rows, state.sort.key, state.sort.dir), {
     names: state.names,
+    fxRate: state.fx?.rate,
     onEdit: (row) => handlers.editHolding(row),
     onDelete: (row) => handlers.deleteHolding(row),
   });

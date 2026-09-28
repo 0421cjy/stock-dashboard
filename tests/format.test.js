@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  formatUsd, formatPct, formatKrw, formatShares, formatClock, signClass, relativeTime, isHttpUrl,
+  formatUsd, formatPct, formatKrw, formatKrwFromUsd, formatShares, formatClock, signClass, relativeTime, isHttpUrl,
 } from '../public/format.js';
 
 test('formatUsd는 두 자리 소수와 부호를 붙인다', () => {
@@ -50,4 +50,13 @@ test('isHttpUrl은 http/https만 허용한다', () => {
   assert.equal(isHttpUrl('https://example.com/a'), true);
   assert.equal(isHttpUrl('javascript:alert(1)'), false);
   assert.equal(isHttpUrl('not a url'), false);
+});
+
+test('formatKrwFromUsd: 달러 × 환율을 원화로, 부호와 환율 없음 처리', () => {
+  assert.equal(formatKrwFromUsd(100, 1400), '₩140,000');
+  assert.equal(formatKrwFromUsd(100, 1400, { sign: true }), '+₩140,000');
+  assert.equal(formatKrwFromUsd(-25, 1400, { sign: true }), '−₩35,000');
+  assert.equal(formatKrwFromUsd(0.0001, 1400, { sign: true }), '₩0');
+  assert.equal(formatKrwFromUsd(100, null), '₩ —');
+  assert.equal(formatKrwFromUsd(null, 1400), '₩ —');
 });

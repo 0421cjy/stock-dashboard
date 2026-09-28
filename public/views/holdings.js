@@ -1,5 +1,5 @@
 import { h } from './dom.js';
-import { formatUsd, formatPct, formatShares, signClass } from '../format.js';
+import { formatUsd, formatPct, formatKrwFromUsd, formatShares, signClass } from '../format.js';
 import { icon } from '../icons.js';
 
 function iconButton(name, label, className) {
@@ -11,7 +11,7 @@ function iconButton(name, label, className) {
   return btn;
 }
 
-export function renderHoldings(tbody, rows, { names, onEdit, onDelete }) {
+export function renderHoldings(tbody, rows, { names, fxRate, onEdit, onDelete }) {
   tbody.replaceChildren(...rows.map((r) => {
     const tr = h('tr', r.stale ? 'is-stale' : '');
     tr.append(
@@ -20,8 +20,8 @@ export function renderHoldings(tbody, rows, { names, onEdit, onDelete }) {
       h('td', 'num', formatUsd(r.avgCost)),
       h('td', 'num', formatUsd(r.price)),
       h('td', `num ${signClass(r.dayChangePct)}`, formatPct(r.dayChangePct, { sign: true })),
-      h('td', 'num', formatUsd(r.marketValue)),
-      pnlCell(r),
+      valueCell(r, fxRate),
+      pnlCell(r, fxRate),
       h('td', 'num', formatPct(r.weight)),
       actionsCell(r, onEdit, onDelete),
     );
@@ -43,9 +43,20 @@ function symbolCell(r, name) {
   return td;
 }
 
-function pnlCell(r) {
+// 평가금액: 달러 아래 원화
+function valueCell(r, fxRate) {
+  const td = h('td', 'num');
+  td.append(h('div', null, formatUsd(r.marketValue)));
+  if (r.hasPrice) td.append(h('div', 'krw', formatKrwFromUsd(r.marketValue, fxRate)));
+  return td;
+}
+
+// 평가손익: 달러, 원화, 수익률 순서
+function pnlCell(r, fxRate) {
   const td = h('td', `num ${signClass(r.pnl)}`);
-  td.append(h('div', null, formatUsd(r.pnl, { sign: true })), h('div', 'sub', formatPct(r.pnlPct, { sign: true })));
+  td.append(h('div', null, formatUsd(r.pnl, { sign: true })));
+  if (r.hasPrice) td.append(h('div', 'krw', formatKrwFromUsd(r.pnl, fxRate, { sign: true })));
+  td.append(h('div', 'sub', formatPct(r.pnlPct, { sign: true })));
   return td;
 }
 

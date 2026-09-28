@@ -1,36 +1,43 @@
 import { h } from './dom.js';
-import { formatUsd, formatPct, formatKrw, signClass } from '../format.js';
+import { formatUsd, formatPct, formatKrwFromUsd, signClass } from '../format.js';
 
 export function renderSummary(el, { totals, excludedCount, fx, stale }) {
-  const krw = fx
-    ? `≈ ${formatKrw(totals.marketValue * fx.rate)} (기준환율 ${fx.date}${fx.stale ? ' · 지연' : ''})`
-    : '원화 환산: 환율 확인 중';
+  const rate = fx?.rate;
+  const fxNote = fx ? `기준환율 ₩${fx.rate.toLocaleString('en-US', { maximumFractionDigits: 2 })} (${fx.date}${fx.stale ? ' · 지연' : ''})` : '환율 확인 중';
   el.replaceChildren(
-    tile('총 평가금액', formatUsd(totals.marketValue), null, krw, 'flat'),
-    tile(
-      '총 평가손익',
-      formatUsd(totals.pnl, { sign: true }),
-      formatPct(totals.pnlPct, { sign: true }),
-      `매입금액 ${formatUsd(totals.cost)}`,
-      signClass(totals.pnl),
-    ),
-    tile(
-      '오늘 등락',
-      formatUsd(totals.dayChange, { sign: true }),
-      formatPct(totals.dayChangePct, { sign: true }),
-      excludedCount ? `${excludedCount}개 종목 제외 (시세 없음)` : '',
-      signClass(totals.dayChange),
-    ),
+    tile({
+      label: '총 평가금액',
+      amount: formatUsd(totals.marketValue),
+      krw: `≈ ${formatKrwFromUsd(totals.marketValue, rate)}`,
+      sub: fxNote,
+      cls: 'flat',
+    }),
+    tile({
+      label: '총 평가손익',
+      amount: formatUsd(totals.pnl, { sign: true }),
+      pct: formatPct(totals.pnlPct, { sign: true }),
+      krw: formatKrwFromUsd(totals.pnl, rate, { sign: true }),
+      sub: `매입금액 ${formatUsd(totals.cost)} (${formatKrwFromUsd(totals.cost, rate)})`,
+      cls: signClass(totals.pnl),
+    }),
+    tile({
+      label: '오늘 등락',
+      amount: formatUsd(totals.dayChange, { sign: true }),
+      pct: formatPct(totals.dayChangePct, { sign: true }),
+      krw: formatKrwFromUsd(totals.dayChange, rate, { sign: true }),
+      sub: excludedCount ? `${excludedCount}개 종목 제외 (시세 없음)` : '',
+      cls: signClass(totals.dayChange),
+    }),
   );
   el.classList.toggle('is-stale', stale);
 }
 
-// 금액은 크게 한 줄로, 퍼센트는 옆에 작게 붙인다(좁은 카드에서 줄바꿈 방지)
-function tile(label, amount, pct, sub, cls) {
+// 금액은 크게 한 줄로(퍼센트는 옆에 작게), 그 아래 원화, 맨 아래 보조 설명.
+function tile({ label, amount, pct, krw, sub, cls }) {
   const box = h('div', 'tile');
   const value = h('div', `tile-value ${cls}`, amount);
   if (pct) value.append(h('span', 'tile-pct', pct));
-  box.append(h('div', 'tile-label', label), value);
+  box.append(h('div', 'tile-label', label), value, h('div', `tile-krw ${cls}`, krw));
   if (sub) box.append(h('div', 'tile-sub', sub));
   return box;
 }
