@@ -15,6 +15,7 @@
   --warn-bg: #fff4e5;
   --live: #1e7a3c;
   --live-bg: #e7f6ec;
+  --danger: #c8404c; /* 경고·삭제·D-DAY: 등락 색 방식과 상관없이 항상 빨강 */
   --ink-2: #4b5563;
   --primary-bg: #1f3a8a;
   --primary-hover: #1a3178;
@@ -56,7 +57,7 @@
     --bg: #0f1217; --card: #171b22; --ink: #e6e8ec; --ink-2: #c4c9d2; --muted: #9aa3b2; --subtle: #6b7483;
     --line: #262c36; --line-strong: #343b47; --hover: #1f2530;
     --accent: #7c9cf5; --primary-bg: #3b5bd1; --primary-hover: #4a69dc;
-    --up: #ef6b75; --down: #6c9cf0;
+    --up: #ef6b75; --down: #6c9cf0; --danger: #ef6b75;
     --warn: #f0a24b; --warn-bg: #2e2415; --warn-border: #5a4320;
     --live: #5fd18b; --live-bg: #15301f;
     --row-hover: #1c2433; --action-hover: #2a3446; --danger-bg: #3a2227;
@@ -75,7 +76,7 @@
   --bg: #0f1217; --card: #171b22; --ink: #e6e8ec; --ink-2: #c4c9d2; --muted: #9aa3b2; --subtle: #6b7483;
   --line: #262c36; --line-strong: #343b47; --hover: #1f2530;
   --accent: #7c9cf5; --primary-bg: #3b5bd1; --primary-hover: #4a69dc;
-  --up: #ef6b75; --down: #6c9cf0;
+  --up: #ef6b75; --down: #6c9cf0; --danger: #ef6b75;
   --warn: #f0a24b; --warn-bg: #2e2415; --warn-border: #5a4320;
   --live: #5fd18b; --live-bg: #15301f;
   --row-hover: #1c2433; --action-hover: #2a3446; --danger-bg: #3a2227;
@@ -89,6 +90,17 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
   color-scheme: dark;
 }
+
+/* 등락 색 미국식(data-updown="us", theme.js): 상승 초록·하락 빨강. 테마 블록보다 뒤에 두어 덮어쓴다.
+   라이트 값을 먼저, 다크(자동·직접) 값은 선택자를 더 구체적으로 해서 다크일 때 이긴다. */
+:root[data-updown="us"] { --up: #1f8a4c; --down: #c8404c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-updown="us"] { --up: #4cc47a; --down: #ef6b75; }
+}
+:root[data-theme="dark"][data-updown="us"] { --up: #4cc47a; --down: #ef6b75; }
+
+/* 등락 색 전환 버튼: 현재 방식의 색으로 ▲▼를 보여준다 */
+#updown-btn { font-size: 11px; gap: 1px; letter-spacing: -0.05em; }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.45; }
@@ -106,8 +118,8 @@ button:hover { background: var(--hover); border-color: var(--line-strong); }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: #fff; }
 button.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-button.danger { background: var(--up); border-color: var(--up); color: #fff; }
-button.danger-text { color: var(--up); border-color: transparent; background: none; }
+button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+button.danger-text { color: var(--danger); border-color: transparent; background: none; }
 button.icon { width: 34px; height: 34px; padding: 0; }
 button:disabled { opacity: 0.5; cursor: wait; }
 .icon { flex: none; }
@@ -204,7 +216,7 @@ button:disabled { opacity: 0.5; cursor: wait; }
 .holdings tbody tr:focus-within .row-actions { opacity: 1; }
 .row-actions button { width: 30px; height: 30px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
 .row-actions button:hover { background: var(--action-hover); color: var(--ink); }
-.row-actions button.row-delete:hover { background: var(--danger-bg); color: var(--up); }
+.row-actions button.row-delete:hover { background: var(--danger-bg); color: var(--danger); }
 @media (prefers-reduced-motion: reduce) { .row-actions { transition: none; } }
 
 /* 차트 */
@@ -234,7 +246,7 @@ button:disabled { opacity: 0.5; cursor: wait; }
   border: 1px solid var(--line); border-radius: 6px; padding: 4px 0; font-size: 12px;
 }
 /* 남은 날짜 단계별 배지 색 (dday.js의 ddayTone) */
-.dday-badge.tone-today { background: var(--up); border-color: var(--up); color: #fff; }
+.dday-badge.tone-today { background: var(--danger); border-color: var(--danger); color: #fff; }
 .dday-badge.tone-soon { background: var(--tone-soon-bg); border-color: var(--tone-soon-line); color: var(--tone-soon-ink); }
 .dday-badge.tone-week { background: var(--tone-week-bg); border-color: var(--tone-week-line); color: var(--tone-week-ink); }
 .dday-badge.tone-month { background: var(--tone-month-bg); border-color: var(--tone-month-line); color: var(--tone-month-ink); }
@@ -265,4 +277,4 @@ dialog label { display: flex; flex-direction: column; gap: 4px; font-size: var(-
 dialog input { background: var(--bg); font: inherit; font-size: var(--fs-md); padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink); }
 .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .spacer { flex: 1; }
-.form-error { color: var(--up); margin: 0; font-size: var(--fs-sm); }
+.form-error { color: var(--danger); margin: 0; font-size: var(--fs-sm); }

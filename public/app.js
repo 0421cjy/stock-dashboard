@@ -2,7 +2,7 @@ import { api } from './api.js';
 import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay } from './calc.js';
 import { statusBadge } from './status.js';
 import { icon } from './icons.js';
-import { normalizeThemePref, nextThemePref, THEME_LABEL } from './theme.js';
+import { normalizeThemePref, nextThemePref, THEME_LABEL, normalizeUpDown, toggleUpDown, UPDOWN_LABEL } from './theme.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
 
@@ -226,6 +226,30 @@ function applyThemePref(pref) {
   render(); // 차트는 그릴 때 현재 테마 색을 읽는다
 }
 
+// 등락 색: 한국식(kr) / 미국식(us). 색은 CSS 변수(--up, --down)만 바뀌므로 차트만 다시 그리면 된다.
+function readUpDown() {
+  try { return normalizeUpDown(localStorage.getItem('updown')); } catch { return 'kr'; }
+}
+
+function applyUpDown(style) {
+  const root = document.documentElement;
+  if (style === 'us') root.dataset.updown = 'us';
+  else delete root.dataset.updown;
+  const btn = $('updown-btn');
+  btn.title = `${UPDOWN_LABEL[style]} · 누르면 바뀝니다`;
+  btn.setAttribute('aria-label', btn.title);
+  render();
+}
+
+function wireUpDown() {
+  applyUpDown(readUpDown());
+  $('updown-btn').addEventListener('click', () => {
+    const next = toggleUpDown(readUpDown());
+    try { localStorage.setItem('updown', next); } catch { /* 저장 못 해도 이번 화면에는 적용 */ }
+    applyUpDown(next);
+  });
+}
+
 function wireTheme() {
   applyThemePref(readThemePref());
   $('theme-btn').addEventListener('click', () => {
@@ -272,6 +296,7 @@ async function main() {
   wireControls();
   await import('./setup.js');
   wireTheme();
+  wireUpDown();
   await refreshAll();
   startSchedulers();
 }

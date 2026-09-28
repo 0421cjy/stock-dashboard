@@ -9,6 +9,7 @@
     try {
       const t = localStorage.getItem('theme');
       if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      if (localStorage.getItem('updown') === 'us') document.documentElement.dataset.updown = 'us';
     } catch { /* 저장소를 못 쓰면 자동(윈도우 설정) */ }
   </script>
   <link rel="stylesheet" href="/vendor/pretendard/pretendardvariable-dynamic-subset.css">
@@ -24,6 +25,7 @@
     <h1>내 포트폴리오</h1>
     <div class="topbar-right">
       <span id="status" class="status tone-loading" role="status">불러오는 중…</span>
+      <button id="updown-btn" type="button" class="icon"><span class="up">▲</span><span class="down">▼</span></button>
       <button id="theme-btn" type="button" class="icon"></button>
       <button id="refresh-btn" type="button" class="icon" title="지금 새로고침" aria-label="지금 새로고침"></button>
       <button id="add-holding-btn" type="button" class="primary">종목 추가</button>
