@@ -119,3 +119,25 @@ test('labelFits: 티커와 비중이 둘 다 나오고, 티커가 최소 글자 
   assert.equal(labelFits({ w: 80, h: 23 }, 'TSLA'), false); // 티커만 보이는 칸
   assert.equal(labelFits({ w: 60, h: 60 }, 'GOOGL'), false); // 비중은 보여도 티커가 칸을 넘친다
 });
+
+const atBottomRight = (r, W, H) => Math.abs(r.x + r.w - W) < 1e-6 && Math.abs(r.y + r.h - H) < 1e-6;
+
+test('squarify: last로 지정한 칸은 크기와 상관없이 오른쪽 아래 모서리에 놓인다', () => {
+  const rects = squarify([{ id: 'A', value: 10 }, { id: 'B', value: 1 }, { id: 'P', value: 5, last: true }], 300, 200);
+  const p = rects.find((r) => r.id === 'P');
+  assert.ok(atBottomRight(p, 300, 200), `P: x=${p.x} y=${p.y} w=${p.w} h=${p.h}`);
+  assert.equal(rects[rects.length - 1].id, 'P');
+});
+
+test('groupOthers: Others가 남은 종목보다 커도 오른쪽 아래 모서리에 놓인다', () => {
+  const W = 500;
+  const H = 260;
+  const tiny = Array.from({ length: 12 }, (_, i) => ({ id: `T${i}`, value: 8 }));
+  const items = [{ id: 'A', value: 500 }, { id: 'B', value: 300 }, { id: 'C', value: 150 }, { id: 'D', value: 60 }, ...tiny];
+  const { rects, others } = groupOthers(items, W, H);
+  const othersValue = others.reduce((s, o) => s + o.value, 0);
+  const kept = items.filter((i) => !others.some((o) => o.id === i.id));
+  assert.ok(kept.some((i) => i.value < othersValue), '이 경우 Others가 남은 종목 중 일부보다 커야 의미 있는 검사다');
+  const o = rects.find((r) => r.id === OTHERS_ID);
+  assert.ok(atBottomRight(o, W, H), `Others: x=${o.x} y=${o.y} w=${o.w} h=${o.h}`);
+});

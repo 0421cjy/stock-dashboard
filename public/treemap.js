@@ -1,6 +1,8 @@
 // 비중 히트맵의 배치(squarified treemap)와 색. DOM에 의존하지 않는 순수 함수.
 
-// items: [{id, value}] → [{id, x, y, w, h}]. 칸 넓이는 value에 비례하고,
+// items: [{id, value, last?}] → [{id, x, y, w, h}]. 칸 넓이는 value에 비례하고,
+// last: true인 칸은 크기와 상관없이 맨 마지막에 놓여 항상 오른쪽 아래 모서리에 붙는다
+// (남은 공간이 늘 오른쪽 아래에 남으므로 마지막 칸이 그 모서리를 채운다).
 // 칸 모양이 되도록 정사각형에 가깝게 줄을 나눈다(Bruls 외, "Squarified Treemaps").
 export function squarify(items, width, height) {
   const valid = items.filter((i) => Number.isFinite(i.value) && i.value > 0);
@@ -9,8 +11,8 @@ export function squarify(items, width, height) {
 
   const scale = (width * height) / total;
   const nodes = valid
-    .map((i) => ({ id: i.id, area: i.value * scale }))
-    .sort((a, b) => b.area - a.area);
+    .map((i) => ({ id: i.id, area: i.value * scale, last: Boolean(i.last) }))
+    .sort((a, b) => Number(a.last) - Number(b.last) || b.area - a.area);
 
   const out = [];
   let x = 0;
@@ -116,7 +118,7 @@ export function groupOthers(items, width, height) {
   const others = [];
   for (;;) {
     const othersValue = others.reduce((s, o) => s + o.value, 0);
-    const layout = others.length ? [...kept, { id: OTHERS_ID, value: othersValue }] : kept;
+    const layout = others.length ? [...kept, { id: OTHERS_ID, value: othersValue, last: true }] : kept;
     const rects = squarify(layout, width, height);
     const allFit = rects.every((r) => r.id === OTHERS_ID || labelFits(r, r.id));
     if (allFit || !kept.length) return { rects, others };
