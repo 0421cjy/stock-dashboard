@@ -1,5 +1,5 @@
 import { h } from './dom.js';
-import { formatUsd, formatPct, formatKrwFromUsd, formatShares, signClass } from '../format.js';
+import { formatUsd, formatPct, formatKrwFromUsd, formatShares, pctClass, usdClass } from '../format.js';
 import { icon } from '../icons.js';
 
 function iconButton(name, label, className) {
@@ -19,7 +19,7 @@ export function renderHoldings(tbody, rows, { names, fxRate, onEdit, onDelete })
       h('td', 'num', formatShares(r.shares)),
       h('td', 'num', formatUsd(r.avgCost)),
       h('td', 'num', formatUsd(r.price)),
-      h('td', `num ${signClass(r.dayChangePct)}`, formatPct(r.dayChangePct, { sign: true })),
+      h('td', `num ${pctClass(r.dayChangePct)}`, formatPct(r.dayChangePct, { sign: true })),
       valueCell(r, fxRate),
       pnlCell(r, fxRate),
       h('td', 'num', formatPct(r.weight)),
@@ -53,7 +53,7 @@ function valueCell(r, fxRate) {
 
 // 평가손익: 달러, 원화, 수익률 순서
 function pnlCell(r, fxRate) {
-  const td = h('td', `num ${signClass(r.pnl)}`);
+  const td = h('td', `num ${usdClass(r.pnl)}`);
   td.append(h('div', null, formatUsd(r.pnl, { sign: true })));
   if (r.hasPrice) td.append(h('div', 'krw', formatKrwFromUsd(r.pnl, fxRate, { sign: true })));
   td.append(h('div', 'sub', formatPct(r.pnlPct, { sign: true })));

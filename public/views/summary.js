@@ -1,5 +1,5 @@
 import { h } from './dom.js';
-import { formatUsd, formatPct, formatKrwFromUsd, signClass } from '../format.js';
+import { formatUsd, formatPct, formatKrwFromUsd, usdClass } from '../format.js';
 
 export function renderSummary(el, { totals, excludedCount, fx, stale }) {
   const rate = fx?.rate;
@@ -18,7 +18,7 @@ export function renderSummary(el, { totals, excludedCount, fx, stale }) {
       pct: formatPct(totals.pnlPct, { sign: true }),
       krw: formatKrwFromUsd(totals.pnl, rate, { sign: true }),
       sub: `매입금액 ${formatUsd(totals.cost)} (${formatKrwFromUsd(totals.cost, rate)})`,
-      cls: signClass(totals.pnl),
+      cls: usdClass(totals.pnl),
     }),
     tile({
       label: '오늘 등락',
@@ -26,7 +26,7 @@ export function renderSummary(el, { totals, excludedCount, fx, stale }) {
       pct: formatPct(totals.dayChangePct, { sign: true }),
       krw: formatKrwFromUsd(totals.dayChange, rate, { sign: true }),
       sub: excludedCount ? `${excludedCount}개 종목 제외 (시세 없음)` : '',
-      cls: signClass(totals.dayChange),
+      cls: usdClass(totals.dayChange),
     }),
   );
   el.classList.toggle('is-stale', stale);

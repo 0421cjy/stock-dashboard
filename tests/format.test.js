@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  formatUsd, formatPct, formatKrw, formatKrwFromUsd, formatShares, formatClock, signClass, relativeTime, isHttpUrl,
+  formatUsd, formatPct, formatKrw, formatKrwFromUsd, formatShares, formatClock, signClass, pctClass, usdClass, relativeTime, isHttpUrl,
 } from '../public/format.js';
 
 test('formatUsd는 두 자리 소수와 부호를 붙인다', () => {
@@ -67,4 +67,22 @@ test('formatPct: digits 옵션으로 소수 자릿수를 정한다(배당률처�
   assert.equal(formatPct(0.00004, { digits: 2 }), '0.00%');
   assert.equal(formatPct(0.102, { sign: true, digits: 2 }), '+10.20%');
   assert.equal(formatPct(0.00017), '0.0%', '기본은 그대로 소수 첫째 자리');
+});
+
+test('pctClass: 화면에서 0.0%로 보이는 값은 색을 칠하지 않는다', () => {
+  assert.equal(pctClass(0.0004), 'flat');   // 0.0%
+  assert.equal(pctClass(-0.0004), 'flat');  // 0.0%
+  assert.equal(pctClass(0.0006), 'up');     // +0.1%
+  assert.equal(pctClass(-0.0006), 'down');  // −0.1%
+  assert.equal(pctClass(0.00004, 2), 'flat'); // 소수 둘째 자리 표시에서 0.00%
+  assert.equal(pctClass(0.00006, 2), 'up');   // +0.01%
+  assert.equal(pctClass(null), 'flat');
+});
+
+test('usdClass: 화면에서 $0.00으로 보이는 금액은 색을 칠하지 않는다', () => {
+  assert.equal(usdClass(0.004), 'flat');
+  assert.equal(usdClass(-0.003), 'flat');
+  assert.equal(usdClass(0.006), 'up');
+  assert.equal(usdClass(-25), 'down');
+  assert.equal(usdClass(null), 'flat');
 });

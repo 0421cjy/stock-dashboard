@@ -49,10 +49,22 @@ export function formatClock(date) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-// 한국식 색: 상승 up(빨강), 하락 down(파랑)
+// 등락 색 클래스: 상승 up, 하락 down (실제 색은 styles.css의 --up/--down, 한국식·미국식 선택)
 export function signClass(n) {
   if (n == null || !Number.isFinite(n) || n === 0) return 'flat';
   return n > 0 ? 'up' : 'down';
+}
+
+// 색은 화면에 보이는 숫자를 따라야 한다: 표시에서 0으로 반올림되는 값은 칠하지 않는다.
+// 퍼센트(비율)는 formatPct와 같은 자릿수 기준, 달러는 formatUsd와 같은 $0.005 기준.
+export function pctClass(ratio, digits = 1) {
+  if (ratio == null || !Number.isFinite(ratio) || Math.abs(ratio * 100) < 0.5 / 10 ** digits) return 'flat';
+  return signClass(ratio);
+}
+
+export function usdClass(n) {
+  if (n == null || !Number.isFinite(n) || Math.abs(n) < 0.005) return 'flat';
+  return signClass(n);
 }
 
 export function relativeTime(ms, now = Date.now()) {
