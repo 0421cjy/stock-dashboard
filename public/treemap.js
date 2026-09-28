@@ -98,3 +98,28 @@ export function tileLabel(rect, symbol) {
   if (rect.w < 56 || rect.h < 48) return { showSymbol: true, showWeight: false, symbolPx };
   return { showSymbol: true, showWeight: true, symbolPx, weightPx: Math.round(clamp(short / 6, 13, 24)) };
 }
+
+// 티커와 비중이 둘 다 온전히 나오는가: 비중 줄이 보이고, 티커가 최소 글자 크기(12px)로도 칸 폭에 들어가야 한다.
+const MIN_SYMBOL_PX = 12;
+export function labelFits(rect, symbol) {
+  const fitWidth = (rect.w - PADDING_X) / (CHAR_WIDTH * String(symbol).length);
+  return tileLabel(rect, symbol).showWeight && fitWidth >= MIN_SYMBOL_PX;
+}
+
+// 글자가 온전히 나오지 못하는 종목을 작은 것부터 하나씩 Others로 옮기며 다시 배치한다.
+// 작은 종목이 빠지면 남은 칸이 커져 글자가 다시 들어갈 수 있으므로 한 번에 다 옮기지 않는다.
+// → { rects: squarify 결과(Others는 id가 OTHERS_ID), others: 묶인 [{id, value}] }
+export const OTHERS_ID = '__others__';
+
+export function groupOthers(items, width, height) {
+  const kept = items.filter((i) => Number.isFinite(i.value) && i.value > 0).sort((a, b) => b.value - a.value);
+  const others = [];
+  for (;;) {
+    const othersValue = others.reduce((s, o) => s + o.value, 0);
+    const layout = others.length ? [...kept, { id: OTHERS_ID, value: othersValue }] : kept;
+    const rects = squarify(layout, width, height);
+    const allFit = rects.every((r) => r.id === OTHERS_ID || labelFits(r, r.id));
+    if (allFit || !kept.length) return { rects, others };
+    others.push(kept.pop()); // 남은 것 중 가장 작은 종목
+  }
+}

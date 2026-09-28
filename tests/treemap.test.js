@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { squarify, flatColors, tileLabel } from '../public/treemap.js';
+import { squarify, flatColors, tileLabel, groupOthers, labelFits, OTHERS_ID } from '../public/treemap.js';
 
 const EPS = 1e-9;
 const area = (r) => r.w * r.h;
@@ -78,4 +78,44 @@ test('tileLabel: 넓은 글자(M·W·Q)가 많은 티커도 칸 폭(좌우 여�
     const { symbolPx } = tileLabel({ w, h }, symbol);
     assert.ok(symbolPx * 0.8 * symbol.length <= w - 28, `${symbol} ${symbolPx}px가 ${w}px 칸을 넘친다`);
   }
+});
+
+const byValueDesc = (items) => [...items].sort((a, b) => b.value - a.value);
+
+test('groupOthers: 모든 칸에 티커와 비중이 다 들어가면 Others를 만들지 않는다', () => {
+  const items = [{ id: 'AAA', value: 50 }, { id: 'BBB', value: 30 }, { id: 'CCC', value: 20 }];
+  const { rects, others } = groupOthers(items, 600, 260);
+  assert.deepEqual(others, []);
+  assert.deepEqual(rects.map((r) => r.id).sort(), ['AAA', 'BBB', 'CCC']);
+});
+
+test('groupOthers: 글자가 다 안 들어가는 칸은 가장 작은 종목부터 Others로 묶는다', () => {
+  const items = [500, 300, 120, 20, 10, 5].map((value, i) => ({ id: `S${i}`, value }));
+  const W = 500;
+  const H = 260;
+  const { rects, others } = groupOthers(items, W, H);
+  assert.ok(others.length > 0, '작은 종목이 묶여야 한다');
+  // 묶인 것은 값이 가장 작은 종목들(정렬했을 때 끝부분)이다
+  const smallest = byValueDesc(items).slice(-others.length).map((i) => i.id).sort();
+  assert.deepEqual(others.map((o) => o.id).sort(), smallest);
+  // Others를 뺀 나머지 칸은 모두 티커와 비중이 온전히 나온다
+  for (const r of rects.filter((x) => x.id !== OTHERS_ID)) assert.ok(labelFits(r, r.id), `${r.id} 칸에 글자가 다 안 들어간다`);
+  // Others 칸 넓이 = 묶인 종목 값의 합에 비례, 전체 넓이는 그대로
+  const total = items.reduce((s, i) => s + i.value, 0);
+  const othersRect = rects.find((r) => r.id === OTHERS_ID);
+  const othersValue = others.reduce((s, o) => s + o.value, 0);
+  assert.ok(Math.abs(othersRect.w * othersRect.h - (othersValue / total) * W * H) < 1e-6);
+  assert.ok(Math.abs(rects.reduce((s, r) => s + r.w * r.h, 0) - W * H) < 1e-6);
+});
+
+test('groupOthers: 영역이 너무 작으면 전부 Others 한 칸이 된다', () => {
+  const { rects, others } = groupOthers([{ id: 'AAA', value: 2 }, { id: 'BBB', value: 1 }], 40, 40);
+  assert.deepEqual(rects.map((r) => r.id), [OTHERS_ID]);
+  assert.equal(others.length, 2);
+});
+
+test('labelFits: 티커와 비중이 둘 다 나오고, 티커가 최소 글자 크기로 칸 폭에 들어가야 한다', () => {
+  assert.equal(labelFits({ w: 120, h: 80 }, 'AAPL'), true);
+  assert.equal(labelFits({ w: 80, h: 23 }, 'TSLA'), false); // 티커만 보이는 칸
+  assert.equal(labelFits({ w: 60, h: 60 }, 'GOOGL'), false); // 비중은 보여도 티커가 칸을 넘친다
 });
