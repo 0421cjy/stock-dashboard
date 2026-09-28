@@ -43,6 +43,17 @@ function fakeFinnhub(overrides = {}) {
 
 let ctx;
 
+// 빈 포트(0)로 띄우면 가끔 fetch가 보안상 막는 포트(6000, 6665 등 10080 이하 일부)를 받아
+// "bad port"로 실패한다. 그런 포트를 받으면 닫고 다시 받는다.
+async function listenOnFetchablePort(app) {
+  for (;;) {
+    const server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    if (server.address().port > 10080) return server;
+    await new Promise((r) => server.close(r));
+  }
+}
+
 async function start({ finnhub = fakeFinnhub(), fx } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'stock-app-'));
   const filePath = path.join(dir, 'portfolio.json');
@@ -57,8 +68,7 @@ async function start({ finnhub = fakeFinnhub(), fx } = {}) {
     vendorDir: dir,
     fontDir: dir,
   });
-  const server = app.listen(0, '127.0.0.1');
-  await once(server, 'listening');
+  const server = await listenOnFetchablePort(app);
   const base = `http://127.0.0.1:${server.address().port}`;
   const call = async (method, url, body, raw) => {
     const res = await fetch(base + url, {
