@@ -35,6 +35,8 @@ export const state = {
   lastQuoteAt: null,
   quoteProblem: null,
   fatal: null,
+  quotesLoaded: false, // 첫 시세 응답을 받았는가(받기 전에는 '불러오는 중'으로 표시)
+  slowLoaded: false,   // 뉴스·실적·배당·환율 첫 응답을 받았는가
 };
 
 const $ = (id) => document.getElementById(id);
@@ -63,10 +65,12 @@ async function refreshQuotes() {
     const values = Object.values(incoming);
     if (values.some((q) => q.price > 0 && !q.stale)) state.lastQuoteAt = new Date();
     state.quoteProblem = quoteDelay(incoming);
+    state.quotesLoaded = true;
   } catch (err) {
     const failed = Object.fromEntries(symbols().map((s) => [s, { error: { code: err.code, message: err.message } }]));
     state.quotes = mergeQuotes(state.quotes, failed);
     state.quoteProblem = err.message;
+    state.quotesLoaded = true;
   }
 }
 
@@ -103,6 +107,7 @@ async function refreshSlow() {
     state.earnings = keepFailed(state.earnings, earnings.value).sort((a, b) => a.date.localeCompare(b.date));
   }
   if (fx.status === 'fulfilled') state.fx = fx.value;
+  state.slowLoaded = true;
   if (dividends.status === 'fulfilled') {
     // 가져오지 못한 종목은 이전 값을 유지한다
     const next = Object.fromEntries(dividends.value.failed.filter((s) => state.dividends[s]).map((s) => [s, state.dividends[s]]));
@@ -130,7 +135,14 @@ export async function refreshAll() {
     render();
     return;
   }
-  await Promise.all([refreshMarket(), refreshQuotes(), refreshSlow()]);
+  // 받는 대로 그린다: 보유 종목 → 장 상태·시세 → 뉴스·실적·배당·환율.
+  // 서버는 Finnhub 요청을 4개씩 처리하므로, 시세를 먼저 보내야 느린 데이터에 밀리지 않는다.
+  render();
+  await Promise.all([
+    refreshMarket().then(render),
+    refreshQuotes().then(render),
+  ]);
+  await refreshSlow();
   // 키가 틀렸는지는 Finnhub 호출이 끝나야 알 수 있으므로 마지막에 확인한다.
   await refreshHealth();
   render();
@@ -198,6 +210,7 @@ export function render() {
     excludedCount: portfolio.excludedCount,
     fx: state.fx,
     stale: Boolean(state.quoteProblem),
+    loading: !state.quotesLoaded && state.holdings.length > 0,
   });
   renderHoldings($('holdings-body'), sortRows(portfolio.rows, state.sort.key, state.sort.dir), {
     names: state.names,

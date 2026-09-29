@@ -3,7 +3,18 @@ import { formatUsd, formatPct, formatKrwFromUsd } from '../format.js';
 import { icon } from '../icons.js';
 
 // 배당금 카드: 요약(연·월 배당금, 배당률) + 종목별 표 + 배당 없는 종목 한 줄.
-export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate, hasHoldings, onEdit }) {
+export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate, hasHoldings, onEdit, loading = false }) {
+  // 배당 지표를 받기 전에는 모든 종목이 '데이터 없음'으로 보이지 않게 '불러오는 중'
+  if (loading) {
+    summaryEl.replaceChildren(...['연간 예상 배당금', '월평균', '포트폴리오 배당률', '매입가 대비 배당률'].map((label) => stat(label, '—', '')));
+    const td = h('td', 'missing-note', '배당 데이터 불러오는 중…');
+    td.colSpan = 7;
+    const tr = h('tr', 'is-missing');
+    tr.append(td);
+    bodyEl.replaceChildren(tr);
+    footEl.hidden = true;
+    return;
+  }
   const { rows, noneSymbols, missingCount, totals } = result;
 
   summaryEl.replaceChildren(

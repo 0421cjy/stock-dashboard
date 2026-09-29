@@ -1,7 +1,15 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd, usdClass } from '../format.js';
 
-export function renderSummary(el, { totals, excludedCount, fx, stale }) {
+export function renderSummary(el, { totals, excludedCount, fx, stale, loading = false }) {
+  // 첫 시세를 받기 전에는 $0.00 대신 '불러오는 중'을 보여준다
+  if (loading) {
+    el.replaceChildren(
+      ...['총 평가금액', '총 평가손익', '오늘 등락'].map((label) => tile({ label, amount: '—', krw: '', sub: '시세 불러오는 중…', cls: 'flat' })),
+    );
+    el.classList.remove('is-stale');
+    return;
+  }
   const rate = fx?.rate;
   const fxNote = fx ? `기준환율 ₩${fx.rate.toLocaleString('en-US', { maximumFractionDigits: 2 })} (${fx.date}${fx.stale ? ' · 지연' : ''})` : '환율 확인 중';
   el.replaceChildren(

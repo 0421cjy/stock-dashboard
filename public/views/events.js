@@ -1,12 +1,14 @@
 import { h } from './dom.js';
 import { ddayTone } from '../dday.js';
 
-export function renderDday(listEl, items, { onEdit }) {
+export function renderDday(listEl, items, { onEdit, loading = false }) {
+  // 실적 일정을 아직 받는 중이면 '없음' 대신 '불러오는 중'
+  const loadingNote = loading ? [h('li', 'empty', '실적 일정 불러오는 중…')] : [];
   if (!items.length) {
-    listEl.replaceChildren(h('li', 'empty', '앞으로 90일 안에 일정이 없습니다.'));
+    listEl.replaceChildren(...(loading ? loadingNote : [h('li', 'empty', '앞으로 90일 안에 일정이 없습니다.')]));
     return;
   }
-  listEl.replaceChildren(...items.map((item) => {
+  listEl.replaceChildren(...loadingNote, ...items.map((item) => {
     const li = h('li');
     const badge = h('div', `dday-badge tone-${ddayTone(item.days)}`, item.label);
     const body = h('div');

@@ -1,7 +1,7 @@
 import { h } from './dom.js';
 import { relativeTime, isHttpUrl } from '../format.js';
 
-export function renderNews(listEl, selectEl, items, { filter, symbols, failed, colors }) {
+export function renderNews(listEl, selectEl, items, { filter, symbols, failed, colors, loading = false }) {
   syncFilter(selectEl, symbols, filter);
   const shown = filter ? items.filter((n) => n.symbol === filter) : items;
   const rows = shown.map((n) => {
@@ -23,7 +23,8 @@ export function renderNews(listEl, selectEl, items, { filter, symbols, failed, c
     }
     return li;
   });
-  if (!rows.length) rows.push(h('li', 'empty', symbols.length ? '최근 7일 뉴스가 없습니다.' : '종목을 추가하면 뉴스가 보입니다.'));
+  if (!rows.length && loading) rows.push(h('li', 'empty', '뉴스 불러오는 중…'));
+  else if (!rows.length) rows.push(h('li', 'empty', symbols.length ? '최근 7일 뉴스가 없습니다.' : '종목을 추가하면 뉴스가 보입니다.'));
   if (failed?.length) rows.push(h('li', 'empty', `뉴스를 가져오지 못한 종목: ${failed.join(', ')}`));
   listEl.replaceChildren(...rows);
 }
