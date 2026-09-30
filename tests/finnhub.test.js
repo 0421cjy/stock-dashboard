@@ -91,7 +91,7 @@ test('429: 동시에 받은 429는 대기 시간을 한 번만 늘린다', async
   assert.equal(r.value.price, 16.67, '첫 백오프(5초)가 지나면 다시 호출한다');
 });
 
-test('동시에 Finnhub로 나가는 요청은 4개로 제한한다', async () => {
+test('동시에 Finnhub로 나가는 요청은 8개로 제한한다', async () => {
   let inFlight = 0;
   let maxInFlight = 0;
   const fetch = async () => {
@@ -103,7 +103,7 @@ test('동시에 Finnhub로 나가는 요청은 4개로 제한한다', async () =
   };
   const fh = createFinnhubClient({ apiKey: 'k', fetch, now: clock() });
   await Promise.all(Array.from({ length: 12 }, (_, i) => fh.quote(`S${i}`)));
-  assert.equal(maxInFlight, 4);
+  assert.equal(maxInFlight, 8);
 });
 
 test('429: 이전 값이 없으면 RATE_LIMITED', async () => {
@@ -137,6 +137,19 @@ test('profile: 회사명을 돌려주고, 빈 응답(ETF 등)은 이름 없이 2
   assert.deepEqual((await fh.profile('VOO')).value, { symbol: 'VOO', name: null });
   await fh.profile('VOO');
   assert.equal(fetch.calls.length, 2, '이름 없는 결과도 캐시해 매번 다시 부르지 않는다');
+});
+
+test('profile: 저장된 이름이 있으면 묻지 않고, 새로 받은 이름은 저장한다', async () => {
+  const saved = { AAPL: { name: 'Apple Inc' }, VOO: { name: null } };
+  const written = [];
+  const names = { get: (s) => saved[s], set: (s, n) => { written.push([s, n]); } };
+  const fetch = fakeFetch(() => ({ body: { name: 'SoFi Technologies Inc' } }));
+  const fh = createFinnhubClient({ apiKey: 'k', now: clock(), fetch, names });
+  assert.deepEqual((await fh.profile('AAPL')).value, { symbol: 'AAPL', name: 'Apple Inc' });
+  assert.deepEqual((await fh.profile('VOO')).value, { symbol: 'VOO', name: null });
+  assert.equal(fetch.calls.length, 0);
+  assert.deepEqual((await fh.profile('SOFI')).value, { symbol: 'SOFI', name: 'SoFi Technologies Inc' });
+  assert.deepEqual(written, [['SOFI', 'SoFi Technologies Inc']]);
 });
 
 test('news: 최신순 5개, 링크 없는 기사 제외, 시간은 ms', async () => {

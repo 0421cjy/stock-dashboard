@@ -14,9 +14,10 @@ const FIRST_BACKOFF = 5_000;
 const MAX_BACKOFF = 60_000;
 const NEWS_PER_SYMBOL = 5;
 // 무료 플랜 초당 한도(30회)를 넘지 않도록 동시에 나가는 요청 수를 제한한다.
-const MAX_CONCURRENT = 4;
+// 요청 하나가 0.4~0.7초 걸리므로 8개씩이면 초당 20회 안팎이다.
+const MAX_CONCURRENT = 8;
 
-export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Date.now, cache = createCache({ now }) }) {
+export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Date.now, cache = createCache({ now }), names = null }) {
   let authFailed = false;
   let backoffMs = 0;
   let blockedUntil = 0;
@@ -95,10 +96,15 @@ export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Da
     },
 
     profile(symbol) {
+      // 파일에 저장해둔 이름이 있으면 Finnhub에 묻지 않는다(서버를 다시 켠 직후 시세 응답이 빨라진다)
+      const saved = names?.get(symbol);
+      if (saved) return Promise.resolve({ value: { symbol, name: saved.name }, stale: false });
       return cache.get(`profile:${symbol}`, TTL.profile, async () => {
         // ETF 등은 회사 정보가 비어 있다. 없는 티커 여부는 호출하는 쪽이 시세로 판단한다.
         const p = await request('/stock/profile2', { symbol });
-        return { symbol, name: p?.name || null };
+        const name = p?.name || null;
+        names?.set(symbol, name);
+        return { symbol, name };
       });
     },
 

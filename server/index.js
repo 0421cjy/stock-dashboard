@@ -5,6 +5,7 @@ import { createApp } from './app.js';
 import { createStore } from './store.js';
 import { createFinnhubClient } from './finnhub.js';
 import { createFxClient } from './fx.js';
+import { createNameStore } from './names.js';
 
 // 내 PC에서만 접속하도록 고정한다. 바꾸지 말 것.
 const HOST = '127.0.0.1';
@@ -13,9 +14,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apiKey = (process.env.FINNHUB_API_KEY ?? '').trim();
 
 const fx = createFxClient();
+const store = createStore({ filePath: path.join(root, 'data', 'portfolio.json') });
+const finnhub = createFinnhubClient({ apiKey, names: createNameStore({ filePath: path.join(root, 'data', 'names.json') }) });
 const app = createApp({
-  store: createStore({ filePath: path.join(root, 'data', 'portfolio.json') }),
-  finnhub: createFinnhubClient({ apiKey }),
+  store,
+  finnhub,
   fx,
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
@@ -34,9 +37,26 @@ server.on('error', (err) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`주식 대시보드: http://${HOST}:${PORT}`);
-  // 첫 접속 전에 환율을 미리 받아둔다. 실패해도 접속 시 다시 시도한다.
-  fx.usdKrw().catch(() => {});
+  warmUp();
   if (!apiKey) {
     console.warn('Finnhub API 키가 없습니다. .env.example을 .env로 복사하고 FINNHUB_API_KEY를 넣어주세요.');
   }
 });
+
+// 첫 접속 전에 환율·휴장일·보유 종목 시세와 회사명을 미리 받아둔다.
+// 실패해도 접속 시 다시 시도하므로 무시한다. 시세는 15초 캐시라 그 안에 접속하면 바로 나온다.
+async function warmUp() {
+  fx.usdKrw().catch(() => {});
+  if (!apiKey) return;
+  finnhub.holidays().catch(() => {});
+  let holdings = [];
+  try {
+    holdings = (await store.read()).holdings;
+  } catch {
+    return;
+  }
+  for (const { symbol } of holdings) {
+    finnhub.quote(symbol).catch(() => {});
+    finnhub.profile(symbol).catch(() => {});
+  }
+}
