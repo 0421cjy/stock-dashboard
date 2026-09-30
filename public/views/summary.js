@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd, usdClass } from '../format.js';
+import { fxNote } from '../fx.js';
 
 export function renderSummary(el, { totals, excludedCount, fx, stale, loading = false }) {
   // 첫 시세를 받기 전에는 $0.00 대신 '불러오는 중'을 보여준다
@@ -11,13 +12,12 @@ export function renderSummary(el, { totals, excludedCount, fx, stale, loading = 
     return;
   }
   const rate = fx?.rate;
-  const fxNote = fx ? `기준환율 ₩${fx.rate.toLocaleString('en-US', { maximumFractionDigits: 2 })} (${fx.date}${fx.stale ? ' · 지연' : ''})` : '환율 확인 중';
   el.replaceChildren(
     tile({
       label: '총 평가금액',
       amount: formatUsd(totals.marketValue),
       krw: `≈ ${formatKrwFromUsd(totals.marketValue, rate)}`,
-      sub: fxNote,
+      sub: fxNote(fx),
       cls: 'flat',
     }),
     tile({

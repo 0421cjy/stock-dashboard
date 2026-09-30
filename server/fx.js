@@ -3,6 +3,7 @@ import { createCache } from './cache.js';
 
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW';
 const FX_TTL = 21_600_000;
+const FX_TIMEOUT_MS = 5_000;
 
 export function createFxClient({ fetch = globalThis.fetch, now = Date.now, cache = createCache({ now }) } = {}) {
   return {
@@ -10,7 +11,7 @@ export function createFxClient({ fetch = globalThis.fetch, now = Date.now, cache
       return cache.get('usdkrw', FX_TTL, async () => {
         let res;
         try {
-          res = await fetch(FX_URL);
+          res = await fetch(FX_URL, { signal: AbortSignal.timeout(FX_TIMEOUT_MS) });
         } catch {
           throw new AppError('UPSTREAM', '환율 서버에 연결할 수 없습니다.', 502);
         }

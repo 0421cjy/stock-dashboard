@@ -12,10 +12,11 @@ const PORT = Number(process.env.PORT) || 5173;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apiKey = (process.env.FINNHUB_API_KEY ?? '').trim();
 
+const fx = createFxClient();
 const app = createApp({
   store: createStore({ filePath: path.join(root, 'data', 'portfolio.json') }),
   finnhub: createFinnhubClient({ apiKey }),
-  fx: createFxClient(),
+  fx,
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
   fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),
@@ -33,6 +34,8 @@ server.on('error', (err) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`주식 대시보드: http://${HOST}:${PORT}`);
+  // 첫 접속 전에 환율을 미리 받아둔다. 실패해도 접속 시 다시 시도한다.
+  fx.usdKrw().catch(() => {});
   if (!apiKey) {
     console.warn('Finnhub API 키가 없습니다. .env.example을 .env로 복사하고 FINNHUB_API_KEY를 넣어주세요.');
   }

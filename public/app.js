@@ -5,6 +5,7 @@ import { icon } from './icons.js';
 import { normalizeThemePref, nextThemePref, THEME_LABEL, normalizeUpDown, toggleUpDown, UPDOWN_LABEL } from './theme.js';
 import { renderSummary } from './views/summary.js';
 import { renderHoldings } from './views/holdings.js';
+import { initialFx, parseSavedFx } from './fx.js';
 
 const QUOTE_MS = 30_000;
 const MARKET_MS = 60_000;
@@ -12,6 +13,10 @@ const SLOW_MS = 30 * 60_000;
 const SLOW_RETRY_MS = 60_000;
 const TOAST_MS = 5_000;
 let slowRetryTimer = null;
+
+function readSavedFx() {
+  try { return parseSavedFx(localStorage.getItem('fx')); } catch { return null; }
+}
 
 const KEY_HELP = {
   missing: 'Finnhub API 키가 없습니다. finnhub.io에서 무료 키를 받아 .env 파일의 FINNHUB_API_KEY에 넣고 서버를 다시 켜주세요. 보유 종목 입력은 지금도 할 수 있습니다.',
@@ -27,7 +32,7 @@ export const state = {
   newsFailed: [],
   earnings: [],
   dividends: {}, // { SYMBOL: { annualDps, growth5y } }
-  fx: null,
+  fx: initialFx(readSavedFx()), // 서버 응답 전에는 지난번 값이나 기본값으로 원화를 보여준다
   market: null,
   keyStatus: 'ok',
   sort: { key: 'marketValue', dir: 'desc' },
@@ -36,7 +41,7 @@ export const state = {
   quoteProblem: null,
   fatal: null,
   quotesLoaded: false, // 첫 시세 응답을 받았는가(받기 전에는 '불러오는 중'으로 표시)
-  slowLoaded: false,   // 뉴스·실적·배당·환율 첫 응답을 받았는가
+  slowLoaded: false,   // 뉴스·실적·배당 첫 응답을 받았는가
 };
 
 const $ = (id) => document.getElementById(id);
@@ -90,13 +95,21 @@ async function refreshHealth() {
   }
 }
 
+async function refreshFx() {
+  try {
+    state.fx = await api.fx();
+    try { localStorage.setItem('fx', JSON.stringify({ rate: state.fx.rate, date: state.fx.date })); } catch { /* 다음 접속 때 기본값을 쓸 뿐 */ }
+  } catch {
+    // 이전 값(또는 기본값) 유지
+  }
+}
+
 async function refreshSlow() {
   const list = symbols();
   const empty = Promise.resolve({ items: [], failed: [] });
-  const [news, earnings, fx, dividends] = await Promise.allSettled([
+  const [news, earnings, dividends] = await Promise.allSettled([
     list.length ? api.news(list) : empty,
     list.length ? api.earnings(list) : empty,
-    api.fx(),
     list.length ? api.dividends(list) : empty,
   ]);
   if (news.status === 'fulfilled') {
@@ -106,7 +119,6 @@ async function refreshSlow() {
   if (earnings.status === 'fulfilled') {
     state.earnings = keepFailed(state.earnings, earnings.value).sort((a, b) => a.date.localeCompare(b.date));
   }
-  if (fx.status === 'fulfilled') state.fx = fx.value;
   state.slowLoaded = true;
   if (dividends.status === 'fulfilled') {
     // 가져오지 못한 종목은 이전 값을 유지한다
@@ -135,12 +147,14 @@ export async function refreshAll() {
     render();
     return;
   }
-  // 받는 대로 그린다: 보유 종목 → 장 상태·시세 → 뉴스·실적·배당·환율.
+  // 받는 대로 그린다: 보유 종목 → 장 상태·시세·환율 → 뉴스·실적·배당.
   // 서버는 Finnhub 요청을 4개씩 처리하므로, 시세를 먼저 보내야 느린 데이터에 밀리지 않는다.
+  // 환율은 Finnhub와 무관하고 금방 오므로 느린 데이터를 기다리지 않는다.
   render();
   await Promise.all([
     refreshMarket().then(render),
     refreshQuotes().then(render),
+    refreshFx().then(render),
   ]);
   await refreshSlow();
   // 키가 틀렸는지는 Finnhub 호출이 끝나야 알 수 있으므로 마지막에 확인한다.
@@ -311,7 +325,7 @@ function startSchedulers() {
     await refreshHealth();
     render();
   }, MARKET_MS);
-  setInterval(async () => { await refreshSlow(); render(); }, SLOW_MS);
+  setInterval(async () => { await Promise.all([refreshFx(), refreshSlow()]); render(); }, SLOW_MS);
 }
 
 async function main() {
