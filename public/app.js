@@ -41,7 +41,7 @@ export const state = {
   quoteProblem: null,
   fatal: null,
   quotesLoaded: false, // 첫 시세 응답을 받았는가(받기 전에는 '불러오는 중'으로 표시)
-  slowLoaded: false,   // 뉴스·실적·배당 첫 응답을 받았는가
+  loaded: { news: false, earnings: false, dividends: false }, // 첫 응답을 받았는가(받기 전에는 '불러오는 중')
 };
 
 const $ = (id) => document.getElementById(id);
@@ -104,31 +104,35 @@ async function refreshFx() {
   }
 }
 
-async function refreshSlow() {
+// 뉴스·실적·배당은 서로 기다리지 않고 받는 대로 반영한다. onEach는 하나가 올 때마다 불린다(다시 그리기).
+async function refreshSlow(onEach = () => {}) {
   const list = symbols();
   const empty = Promise.resolve({ items: [], failed: [] });
-  const [news, earnings, dividends] = await Promise.allSettled([
-    list.length ? api.news(list) : empty,
-    list.length ? api.earnings(list) : empty,
-    list.length ? api.dividends(list) : empty,
-  ]);
-  if (news.status === 'fulfilled') {
-    state.news = keepFailed(state.news, news.value).sort((a, b) => b.datetime - a.datetime);
-    state.newsFailed = news.value.failed;
-  }
-  if (earnings.status === 'fulfilled') {
-    state.earnings = keepFailed(state.earnings, earnings.value).sort((a, b) => a.date.localeCompare(b.date));
-  }
-  state.slowLoaded = true;
-  if (dividends.status === 'fulfilled') {
+  const fetchOr = (fn) => (list.length ? fn(list) : empty);
+
+  const news = fetchOr(api.news).then((r) => {
+    state.news = keepFailed(state.news, r).sort((a, b) => b.datetime - a.datetime);
+    state.newsFailed = r.failed;
+    return r;
+  }).finally(() => { state.loaded.news = true; onEach(); });
+
+  const earnings = fetchOr(api.earnings).then((r) => {
+    state.earnings = keepFailed(state.earnings, r).sort((a, b) => a.date.localeCompare(b.date));
+    return r;
+  }).finally(() => { state.loaded.earnings = true; onEach(); });
+
+  const dividends = fetchOr(api.dividends).then((r) => {
     // 가져오지 못한 종목은 이전 값을 유지한다
-    const next = Object.fromEntries(dividends.value.failed.filter((s) => state.dividends[s]).map((s) => [s, state.dividends[s]]));
-    for (const d of dividends.value.items) next[d.symbol] = d;
+    const next = Object.fromEntries(r.failed.filter((s) => state.dividends[s]).map((s) => [s, state.dividends[s]]));
+    for (const d of r.items) next[d.symbol] = d;
     state.dividends = next;
-  }
+    return r;
+  }).finally(() => { state.loaded.dividends = true; onEach(); });
+
+  const results = await Promise.allSettled([news, earnings, dividends]);
 
   // 일부 종목을 못 가져왔으면(대개 호출 한도) 30분을 기다리지 않고 1분 뒤 한 번 더 시도한다.
-  const failedSome = [news, earnings, dividends].some((r) => r.status === 'rejected' || r.value.failed.length);
+  const failedSome = results.some((r) => r.status === 'rejected' || r.value.failed.length);
   if (failedSome && !slowRetryTimer) {
     slowRetryTimer = setTimeout(async () => {
       slowRetryTimer = null;
@@ -149,16 +153,17 @@ export async function refreshAll() {
   }
   // 받는 대로 그린다: 보유 종목 → 장 상태·시세·환율 → 뉴스·실적·배당.
   // 서버는 Finnhub 요청을 4개씩 처리하므로, 시세를 먼저 보내야 느린 데이터에 밀리지 않는다.
-  // 환율은 Finnhub와 무관하고 금방 오므로 느린 데이터를 기다리지 않는다.
+  // 환율은 Finnhub와 무관하므로 따로 받는다. 늦어도 다른 데이터를 붙잡지 않는다(그동안은 임시 환율).
   render();
+  const fxDone = refreshFx().then(render);
   await Promise.all([
     refreshMarket().then(render),
     refreshQuotes().then(render),
-    refreshFx().then(render),
   ]);
-  await refreshSlow();
+  await refreshSlow(render);
   // 키가 틀렸는지는 Finnhub 호출이 끝나야 알 수 있으므로 마지막에 확인한다.
   await refreshHealth();
+  await fxDone;
   render();
 }
 

@@ -95,14 +95,14 @@ newsFilter.addEventListener('change', () => {
 
 addRenderer(() => {
   const items = buildDdayList({ earnings: state.earnings, events: state.events, now: new Date() });
-  const loading = !state.slowLoaded && state.holdings.length > 0;
-  renderDday(document.getElementById('dday-list'), items, { onEdit: editEvent, loading });
+  const has = state.holdings.length > 0;
+  renderDday(document.getElementById('dday-list'), items, { onEdit: editEvent, loading: has && !state.loaded.earnings });
   renderNews(document.getElementById('news-list'), newsFilter, state.news, {
     filter: state.newsFilter,
     symbols: state.holdings.map((h) => h.symbol),
     failed: state.newsFailed,
     colors: holdingColors(),
-    loading,
+    loading: has && !state.loaded.news,
   });
 });
 
@@ -130,6 +130,6 @@ addRenderer(() => {
       footEl: document.getElementById('dividend-foot'),
     },
     result,
-    { fxRate: state.fx?.rate, hasHoldings: state.holdings.length > 0, onEdit: editDps, loading: !state.slowLoaded && state.holdings.length > 0 },
+    { fxRate: state.fx?.rate, hasHoldings: state.holdings.length > 0, onEdit: editDps, loading: !state.loaded.dividends && state.holdings.length > 0 },
   );
 });
