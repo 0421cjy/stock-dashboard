@@ -40,4 +40,5 @@ export const api = {
   setManualDps: (symbol, manualDps) => call('PUT', `/api/holdings/${seg(symbol)}/dividend`, { manualDps }),
   fx: () => call('GET', '/api/fx'),
   marketStatus: () => call('GET', '/api/market-status'),
+  extended: (symbols) => call('GET', `/api/extended?symbols=${list(symbols)}`),
 };

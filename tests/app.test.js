@@ -54,7 +54,7 @@ async function listenOnFetchablePort(app) {
   }
 }
 
-async function start({ finnhub = fakeFinnhub(), fx } = {}) {
+async function start({ finnhub = fakeFinnhub(), fx, extended = null, now = '2026-09-28T14:00:00Z' } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'stock-app-'));
   const filePath = path.join(dir, 'portfolio.json');
   let n = 0;
@@ -63,7 +63,8 @@ async function start({ finnhub = fakeFinnhub(), fx } = {}) {
     store,
     finnhub,
     fx: fx ?? { usdKrw: async () => ({ value: { rate: 1400, date: '2026-09-25' }, stale: false }) },
-    now: () => new Date('2026-09-28T14:00:00Z'), // 월요일 뉴욕 10:00
+    extended,
+    now: () => new Date(now), // 기본: 월요일 뉴욕 10:00
     publicDir: dir,
     vendorDir: dir,
     fontDir: dir,
@@ -181,6 +182,26 @@ test('장 상태: 휴장일 조회가 실패해도 시간표로 판정한다', a
   ctx = await start({ finnhub: fakeFinnhub({ holidays: async () => { throw new AppError('UPSTREAM', 'x', 502); } }) });
   const r = await ctx.call('GET', '/api/market-status');
   assert.deepEqual(r.body, { isOpen: true, session: 'regular' });
+});
+
+test('시간외 시세: 프리마켓에만 묻고, 못 가져온 종목은 뺀다', async () => {
+  const asked = [];
+  const extended = {
+    price: async (s) => {
+      asked.push(s);
+      if (s === 'BAD') throw new AppError('UPSTREAM', 'x', 502);
+      if (s === 'NONE') return { value: null };
+      return { value: { session: 'pre', price: 101, change: 1, changeRatio: 0.01, time: 1 } };
+    },
+  };
+  await ctx.close();
+  ctx = await start({ extended }); // 장중
+  assert.deepEqual((await ctx.call('GET', '/api/extended?symbols=AAPL')).body, {});
+  assert.deepEqual(asked, []);
+  await ctx.close();
+  ctx = await start({ extended, now: '2026-09-28T12:00:00Z' }); // 뉴욕 08:00 프리마켓
+  const r = await ctx.call('GET', '/api/extended?symbols=AAPL,BAD,NONE');
+  assert.deepEqual(r.body, { AAPL: { session: 'pre', price: 101, change: 1, changeRatio: 0.01, time: 1 } });
 });
 
 test('환율과 키 상태', async () => {

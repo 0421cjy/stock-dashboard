@@ -1,6 +1,7 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd, formatShares, pctClass, usdClass } from '../format.js';
 import { icon } from '../icons.js';
+import { SESSION_LABEL } from '../status.js';
 
 function iconButton(name, label, className) {
   const btn = h('button', className);
@@ -11,14 +12,14 @@ function iconButton(name, label, className) {
   return btn;
 }
 
-export function renderHoldings(tbody, rows, { names, fxRate, onEdit, onDelete }) {
+export function renderHoldings(tbody, rows, { names, fxRate, extended = {}, onEdit, onDelete }) {
   tbody.replaceChildren(...rows.map((r) => {
     const tr = h('tr', r.stale ? 'is-stale' : '');
     tr.append(
       symbolCell(r, names[r.symbol]),
       h('td', 'num', formatShares(r.shares)),
       h('td', 'num', formatUsd(r.avgCost)),
-      h('td', 'num', formatUsd(r.price)),
+      priceCell(r, extended[r.symbol]),
       h('td', `num ${pctClass(r.dayChangePct)}`, formatPct(r.dayChangePct, { sign: true })),
       valueCell(r, fxRate),
       pnlCell(r, fxRate),
@@ -40,6 +41,22 @@ function symbolCell(r, name) {
     td.append(mark);
   }
   td.append(h('span', 'name', name ?? ''));
+  return td;
+}
+
+const SHORT_LABEL = { pre: '프리', post: '애프터' };
+
+// 현재가(정규장). 프리마켓·애프터마켓이면 그 가격과 정규장 종가 대비 등락을 아래에 작게.
+function priceCell(r, ext) {
+  const td = h('td', 'num');
+  td.append(h('div', null, formatUsd(r.price)));
+  if (ext) {
+    const label = SESSION_LABEL[ext.session];
+    const line = h('div', 'sub ext', `${SHORT_LABEL[ext.session]} ${formatUsd(ext.price)} `);
+    line.append(h('span', pctClass(ext.changeRatio), formatPct(ext.changeRatio, { sign: true })));
+    line.title = `${label} 마지막 체결가 · 정규장 종가 대비 (평가금액은 정규장 가격 기준)`;
+    td.append(line);
+  }
   return td;
 }
 

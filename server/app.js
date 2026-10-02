@@ -35,7 +35,7 @@ async function collect(symbols, fn) {
   return { items, failed };
 }
 
-export function createApp({ store, finnhub, fx, now = () => new Date(), publicDir, vendorDir, fontDir }) {
+export function createApp({ store, finnhub, fx, extended = null, now = () => new Date(), publicDir, vendorDir, fontDir }) {
   const app = express();
 
   // DNS rebinding 방어: 다른 도메인 이름으로 들어온 요청(악성 사이트가 자기 도메인을
@@ -148,14 +148,35 @@ export function createApp({ store, finnhub, fx, now = () => new Date(), publicDi
     res.json({ rate: r.value.rate, date: r.value.date, stale: r.stale });
   });
 
-  app.get('/api/market-status', async (req, res) => {
+  async function marketStatus() {
     let holidays = [];
     try {
       holidays = (await finnhub.holidays()).value;
     } catch {
       // 휴장일 정보가 없으면 시간표만으로 판정
     }
-    res.json(computeMarketStatus(now(), holidays));
+    return computeMarketStatus(now(), holidays);
+  }
+
+  app.get('/api/market-status', async (req, res) => {
+    res.json(await marketStatus());
+  });
+
+  // 프리마켓·애프터마켓 가격. 그 시간대가 아니면 묻지 않고 빈 결과를 준다.
+  // { SYMBOL: { session, price, change, changeRatio, time } } — 시간외 거래가 없거나 못 가져온 종목은 빠진다.
+  app.get('/api/extended', async (req, res) => {
+    const { session } = await marketStatus();
+    if (!extended || (session !== 'pre' && session !== 'post')) return res.json({});
+    const symbols = parseSymbols(req.query.symbols);
+    const entries = await Promise.all(symbols.map(async (s) => {
+      try {
+        const v = (await extended.price(s)).value;
+        return v && v.session === session ? [s, v] : null;
+      } catch {
+        return null;
+      }
+    }));
+    res.json(Object.fromEntries(entries.filter(Boolean)));
   });
 
   app.use('/api', (req, res) => {

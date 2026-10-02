@@ -14,6 +14,11 @@ test('statusBadge: 장 마감이면 회색 단계', () => {
   assert.deepEqual(statusBadge({ market: { isOpen: false }, lastQuoteAt: null, quoteProblem: null }), { tone: 'closed', label: '장 마감' });
 });
 
+test('statusBadge: 프리마켓·애프터마켓이면 그 이름으로(회색 단계)', () => {
+  assert.deepEqual(statusBadge({ market: { isOpen: false, session: 'pre' }, lastQuoteAt: at, quoteProblem: null }), { tone: 'closed', label: '프리마켓 · 14:32:05' });
+  assert.deepEqual(statusBadge({ market: { isOpen: false, session: 'post' }, lastQuoteAt: null, quoteProblem: null }), { tone: 'closed', label: '애프터마켓' });
+});
+
 test('statusBadge: 시세가 지연되면 장 상태보다 먼저 지연을 알린다', () => {
   assert.deepEqual(statusBadge({ market: { isOpen: true }, lastQuoteAt: at, quoteProblem: '지연' }), { tone: 'delayed', label: '지연 · 14:32:05' });
 });

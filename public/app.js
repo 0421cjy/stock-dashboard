@@ -28,6 +28,7 @@ export const state = {
   events: [],
   names: {},
   quotes: {},
+  extended: {}, // 프리마켓·애프터마켓 가격 { SYMBOL: { session, price, changeRatio, ... } }
   news: [],
   newsFailed: [],
   earnings: [],
@@ -76,6 +77,20 @@ async function refreshQuotes() {
     state.quotes = mergeQuotes(state.quotes, failed);
     state.quoteProblem = err.message;
     state.quotesLoaded = true;
+  }
+}
+
+// 프리마켓·애프터마켓에만 받는다. 그 밖의 시간에는 비운다.
+async function refreshExtended() {
+  const session = state.market?.session;
+  if (!state.holdings.length || (session !== 'pre' && session !== 'post')) {
+    state.extended = {};
+    return;
+  }
+  try {
+    state.extended = await api.extended(symbols());
+  } catch {
+    // 시간외 가격은 없어도 된다. 이전 값 유지
   }
 }
 
@@ -157,7 +172,7 @@ export async function refreshAll() {
   render();
   const fxDone = refreshFx().then(render);
   await Promise.all([
-    refreshMarket().then(render),
+    refreshMarket().then(refreshExtended).then(render),
     refreshQuotes().then(render),
   ]);
   await refreshSlow(render);
@@ -169,7 +184,7 @@ export async function refreshAll() {
 
 export async function afterHoldingChange() {
   await loadPortfolio();
-  await Promise.all([refreshQuotes(), refreshSlow()]);
+  await Promise.all([refreshQuotes(), refreshExtended(), refreshSlow()]);
   render();
 }
 
@@ -234,6 +249,7 @@ export function render() {
   renderHoldings($('holdings-body'), sortRows(portfolio.rows, state.sort.key, state.sort.dir), {
     names: state.names,
     fxRate: state.fx?.rate,
+    extended: state.extended,
     onEdit: (row) => handlers.editHolding(row),
     onDelete: (row) => handlers.deleteHolding(row),
   });
@@ -327,7 +343,7 @@ function startSchedulers() {
   }, QUOTE_MS);
   setInterval(async () => {
     await refreshMarket();
-    await refreshHealth();
+    await Promise.all([refreshExtended(), refreshHealth()]);
     render();
   }, MARKET_MS);
   setInterval(async () => { await Promise.all([refreshFx(), refreshSlow()]); render(); }, SLOW_MS);
