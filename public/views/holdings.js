@@ -1,7 +1,6 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd, formatShares, pctClass, usdClass } from '../format.js';
 import { icon } from '../icons.js';
-import { SESSION_LABEL } from '../status.js';
 
 function iconButton(name, label, className) {
   const btn = h('button', className);
@@ -12,15 +11,15 @@ function iconButton(name, label, className) {
   return btn;
 }
 
-export function renderHoldings(tbody, rows, { names, fxRate, extended = {}, onEdit, onDelete }) {
+export function renderHoldings(tbody, rows, { names, fxRate, onEdit, onDelete }) {
   tbody.replaceChildren(...rows.map((r) => {
     const tr = h('tr', r.stale ? 'is-stale' : '');
     tr.append(
       symbolCell(r, names[r.symbol]),
       h('td', 'num', formatShares(r.shares)),
       h('td', 'num', formatUsd(r.avgCost)),
-      priceCell(r, extended[r.symbol]),
-      h('td', `num ${pctClass(r.dayChangePct)}`, formatPct(r.dayChangePct, { sign: true })),
+      h('td', 'num', formatUsd(r.price)),
+      dayCell(r),
       valueCell(r, fxRate),
       pnlCell(r, fxRate),
       h('td', 'num', formatPct(r.weight)),
@@ -45,18 +44,20 @@ function symbolCell(r, name) {
 }
 
 const SHORT_LABEL = { pre: '프리', post: '애프터' };
+const SESSION_TITLE = {
+  pre: '프리마켓 가격 기준, 마지막 정규장 종가 대비',
+  post: '애프터마켓 가격 기준, 전일 종가 대비',
+};
 
-// 현재가(정규장). 프리마켓·애프터마켓이면 그 가격과 정규장 종가 대비 등락을 아래에 작게.
-function priceCell(r, ext) {
-  const td = h('td', 'num');
-  td.append(h('div', null, formatUsd(r.price)));
-  if (ext) {
-    const label = SESSION_LABEL[ext.session];
-    const line = h('div', 'sub ext', `${SHORT_LABEL[ext.session]} ${formatUsd(ext.price)} `);
-    line.append(h('span', pctClass(ext.changeRatio), formatPct(ext.changeRatio, { sign: true })));
-    line.title = `${label} 마지막 체결가 · 정규장 종가 대비 (평가금액은 정규장 가격 기준)`;
-    td.append(line);
+// 오늘 등락률. 프리마켓·애프터마켓 가격으로 계산했으면 앞에 작은 표시를 붙인다.
+function dayCell(r) {
+  const td = h('td', `num ${pctClass(r.dayChangePct)}`);
+  if (r.session) {
+    const tag = h('span', 'session-tag', SHORT_LABEL[r.session]);
+    tag.title = `${SESSION_TITLE[r.session]} (평가금액·손익은 정규장 가격 기준)`;
+    td.append(tag);
   }
+  td.append(formatPct(r.dayChangePct, { sign: true }));
   return td;
 }
 

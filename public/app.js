@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay } from './calc.js';
+import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended } from './calc.js';
 import { statusBadge } from './status.js';
 import { icon } from './icons.js';
 import { normalizeThemePref, nextThemePref, THEME_LABEL, normalizeUpDown, toggleUpDown, UPDOWN_LABEL } from './theme.js';
@@ -246,10 +246,9 @@ export function render() {
     stale: Boolean(state.quoteProblem),
     loading: !state.quotesLoaded && state.holdings.length > 0,
   });
-  renderHoldings($('holdings-body'), sortRows(portfolio.rows, state.sort.key, state.sort.dir), {
+  renderHoldings($('holdings-body'), sortRows(applyExtended(portfolio.rows, state.extended), state.sort.key, state.sort.dir), {
     names: state.names,
     fxRate: state.fx?.rate,
-    extended: state.extended,
     onEdit: (row) => handlers.editHolding(row),
     onDelete: (row) => handlers.deleteHolding(row),
   });

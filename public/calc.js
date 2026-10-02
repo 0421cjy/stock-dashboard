@@ -67,6 +67,18 @@ function toRow(h, q) {
   };
 }
 
+// 프리마켓·애프터마켓 가격이 있으면 '오늘' 등락률을 그 가격으로 바꾸고 session을 붙인다.
+// 프리마켓은 마지막 정규장 종가 대비, 애프터마켓은 전일 종가 대비(오늘 정규장 + 시간외).
+// 시간외 가격이 없는 종목은 정규장 등락률 그대로. 평가금액·손익은 정규장 가격 기준으로 둔다.
+export function applyExtended(rows, extended = {}) {
+  return rows.map((r) => {
+    const ext = extended[r.symbol];
+    if (!r.hasPrice || !(ext?.price > 0)) return r;
+    const base = ext.session === 'post' && r.prevClose > 0 ? r.prevClose : r.price;
+    return { ...r, dayChangePct: ext.price / base - 1, session: ext.session };
+  });
+}
+
 function sum(rows, key) {
   return rows.reduce((acc, r) => acc + r[key], 0);
 }

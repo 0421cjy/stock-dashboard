@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay } from '../public/calc.js';
+import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended } from '../public/calc.js';
 
 const holdings = [
   { symbol: 'AAA', shares: 10, avgCost: 100 },
@@ -120,4 +120,24 @@ test('sortRows는 null을 방향과 상관없이 맨 뒤에 둔다', () => {
   assert.deepEqual(sortRows(rows, 'pnl', 'asc').map((r) => r.symbol), ['C', 'B', 'A']);
   assert.deepEqual(sortRows(rows, 'symbol', 'asc').map((r) => r.symbol), ['A', 'B', 'C']);
   assert.deepEqual(rows.map((r) => r.symbol), ['B', 'A', 'C'], '원본 배열은 바꾸지 않는다');
+});
+
+test('applyExtended: 프리는 마지막 종가 대비, 애프터는 전일 종가 대비, 없으면 그대로', () => {
+  const rows = [
+    { symbol: 'A', hasPrice: true, price: 100, prevClose: 90, dayChangePct: 0.111 },
+    { symbol: 'B', hasPrice: true, price: 100, prevClose: 90, dayChangePct: 0.111 },
+    { symbol: 'C', hasPrice: true, price: 100, prevClose: 90, dayChangePct: 0.111 },
+    { symbol: 'D', hasPrice: false, price: null, prevClose: null, dayChangePct: null },
+  ];
+  const out = applyExtended(rows, {
+    A: { session: 'pre', price: 102 },
+    B: { session: 'post', price: 99 },
+    D: { session: 'pre', price: 5 },
+  });
+  assert.equal(out[0].session, 'pre');
+  assert.ok(Math.abs(out[0].dayChangePct - 0.02) < 1e-12);
+  assert.equal(out[1].session, 'post');
+  assert.ok(Math.abs(out[1].dayChangePct - 0.1) < 1e-12);
+  assert.equal(out[2], rows[2]);
+  assert.equal(out[3], rows[3]);
 });
