@@ -1,8 +1,9 @@
 import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd, usdClass } from '../format.js';
 import { fxNote } from '../fx.js';
+import { SESSION_LABEL } from '../status.js';
 
-export function renderSummary(el, { totals, excludedCount, fx, stale, loading = false }) {
+export function renderSummary(el, { totals, day = totals, excludedCount, fx, stale, loading = false }) {
   // 첫 시세를 받기 전에는 $0.00 대신 '불러오는 중'을 보여준다
   if (loading) {
     el.replaceChildren(
@@ -30,14 +31,21 @@ export function renderSummary(el, { totals, excludedCount, fx, stale, loading = 
     }),
     tile({
       label: '오늘 등락',
-      amount: formatUsd(totals.dayChange, { sign: true }),
-      pct: formatPct(totals.dayChangePct, { sign: true }),
-      krw: formatKrwFromUsd(totals.dayChange, rate, { sign: true }),
-      sub: excludedCount ? `${excludedCount}개 종목 제외 (시세 없음)` : '',
-      cls: usdClass(totals.dayChange),
+      amount: formatUsd(day.dayChange, { sign: true }),
+      pct: formatPct(day.dayChangePct, { sign: true }),
+      krw: formatKrwFromUsd(day.dayChange, rate, { sign: true }),
+      sub: [sessionNote(day), excludedCount ? `${excludedCount}개 종목 제외 (시세 없음)` : ''].filter(Boolean).join(' · '),
+      cls: usdClass(day.dayChange),
     }),
   );
   el.classList.toggle('is-stale', stale);
+}
+
+// 시간외 가격으로 계산했으면 그 사실을, 일부 종목만이면 몇 개인지 알린다
+function sessionNote(day) {
+  if (!day.session) return '';
+  const label = `${SESSION_LABEL[day.session]} 가격 기준`;
+  return day.extCount < day.pricedCount ? `${label} (${day.extCount}/${day.pricedCount}개 종목)` : label;
 }
 
 // 금액은 크게 한 줄로(퍼센트는 옆에 작게), 그 아래 원화, 맨 아래 보조 설명.

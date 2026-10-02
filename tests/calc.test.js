@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended } from '../public/calc.js';
+import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals } from '../public/calc.js';
 
 const holdings = [
   { symbol: 'AAA', shares: 10, avgCost: 100 },
@@ -140,4 +140,27 @@ test('applyExtended: 프리는 마지막 종가 대비, 애프터는 전일 종�
   assert.ok(Math.abs(out[1].dayChangePct - 0.1) < 1e-12);
   assert.equal(out[2], rows[2]);
   assert.equal(out[3], rows[3]);
+});
+
+test('dayTotals: 시간외 종목은 시간외 금액으로, 나머지는 정규장 등락으로 합친다', () => {
+  // A: 10주, 종가 100 → 프리 102 (+20달러, 기준 1000)
+  // B: 5주, 전일 90 → 현재 100 (+50달러, 기준 450), 시간외 없음
+  const { rows } = computePortfolio(
+    [{ symbol: 'A', shares: 10, avgCost: 50 }, { symbol: 'B', shares: 5, avgCost: 50 }],
+    { A: { price: 100, prevClose: 98 }, B: { price: 100, prevClose: 90 } },
+  );
+  const t = dayTotals(applyExtended(rows, { A: { session: 'pre', price: 102 } }));
+  assert.ok(Math.abs(t.dayChange - 70) < 1e-9);
+  assert.ok(Math.abs(t.dayChangePct - 70 / 1450) < 1e-12);
+  assert.equal(t.session, 'pre');
+  assert.equal(t.extCount, 1);
+  assert.equal(t.pricedCount, 2);
+});
+
+test('dayTotals: 시간외 가격이 없으면 정규장 합계와 같다', () => {
+  const p = computePortfolio([{ symbol: 'B', shares: 5, avgCost: 50 }], { B: { price: 100, prevClose: 90 } });
+  const t = dayTotals(applyExtended(p.rows, {}));
+  assert.equal(t.dayChange, p.totals.dayChange);
+  assert.equal(t.dayChangePct, p.totals.dayChangePct);
+  assert.equal(t.session, null);
 });

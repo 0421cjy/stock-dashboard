@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended } from './calc.js';
+import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals } from './calc.js';
 import { statusBadge } from './status.js';
 import { icon } from './icons.js';
 import { normalizeThemePref, nextThemePref, THEME_LABEL, normalizeUpDown, toggleUpDown, UPDOWN_LABEL } from './theme.js';
@@ -239,14 +239,17 @@ export function render() {
   renderStatus();
   renderSortHeaders();
   const portfolio = computePortfolio(state.holdings, state.quotes);
+  // 프리마켓·애프터마켓이면 '오늘' 등락(표와 요약 카드)을 시간외 가격으로 계산한다
+  const rows = applyExtended(portfolio.rows, state.extended);
   renderSummary($('summary'), {
     totals: portfolio.totals,
+    day: dayTotals(rows),
     excludedCount: portfolio.excludedCount,
     fx: state.fx,
     stale: Boolean(state.quoteProblem),
     loading: !state.quotesLoaded && state.holdings.length > 0,
   });
-  renderHoldings($('holdings-body'), sortRows(applyExtended(portfolio.rows, state.extended), state.sort.key, state.sort.dir), {
+  renderHoldings($('holdings-body'), sortRows(rows, state.sort.key, state.sort.dir), {
     names: state.names,
     fxRate: state.fx?.rate,
     onEdit: (row) => handlers.editHolding(row),

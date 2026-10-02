@@ -75,8 +75,30 @@ export function applyExtended(rows, extended = {}) {
     const ext = extended[r.symbol];
     if (!r.hasPrice || !(ext?.price > 0)) return r;
     const base = ext.session === 'post' && r.prevClose > 0 ? r.prevClose : r.price;
-    return { ...r, dayChangePct: ext.price / base - 1, session: ext.session };
+    return {
+      ...r,
+      dayChange: r.shares * (ext.price - base),
+      dayChangePct: ext.price / base - 1,
+      dayBaseValue: r.shares * base,
+      session: ext.session,
+    };
   });
+}
+
+// 요약 카드의 '오늘 등락'. applyExtended를 거친 행으로 계산해 표와 같은 기준을 쓴다.
+// session: 시간외 가격을 쓴 종목이 있으면 그 시간대, extCount: 그런 종목 수
+export function dayTotals(rows) {
+  const priced = rows.filter((r) => r.hasPrice);
+  const dayChange = sum(priced, 'dayChange');
+  const baseValue = priced.reduce((acc, r) => acc + (r.dayBaseValue ?? r.marketValue - r.dayChange), 0);
+  const ext = priced.filter((r) => r.session);
+  return {
+    dayChange,
+    dayChangePct: baseValue > 0 ? dayChange / baseValue : null,
+    session: ext[0]?.session ?? null,
+    extCount: ext.length,
+    pricedCount: priced.length,
+  };
 }
 
 function sum(rows, key) {
