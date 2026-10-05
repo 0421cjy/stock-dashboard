@@ -20,8 +20,8 @@ export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate,
   summaryEl.replaceChildren(
     stat('연간 예상 배당금', formatUsd(totals.annual), formatKrwFromUsd(totals.annual, fxRate)),
     stat('월평균', formatUsd(totals.monthly), formatKrwFromUsd(totals.monthly, fxRate)),
-    stat('포트폴리오 배당률', formatPct(totals.yield, { digits: 2 }), '평가금액 대비'),
-    stat('매입가 대비 배당률', formatPct(totals.yieldOnCost, { digits: 2 }), '매입금액 대비'),
+    stat('포트폴리오 배당률', formatPct(totals.yield), '평가금액 대비'),
+    stat('매입가 대비 배당률', formatPct(totals.yieldOnCost), '매입금액 대비'),
   );
 
   bodyEl.replaceChildren(...rows.map((r) => (r.source === 'missing' ? missingRow(r, onEdit) : payingRow(r, fxRate, onEdit))));
@@ -50,8 +50,8 @@ function payingRow(r, fxRate, onEdit) {
     h('td', 'sym', r.symbol),
     dps,
     annual,
-    h('td', 'num', formatPct(r.yield, { digits: 2 })),
-    h('td', 'num', formatPct(r.yieldOnCost, { digits: 2 })),
+    h('td', 'num', formatPct(r.yield)),
+    h('td', 'num', formatPct(r.yieldOnCost)),
     h('td', 'num', r.growth5y == null ? '—' : formatPct(r.growth5y / 100, { sign: true })),
     editCell(r, onEdit, `${r.symbol} 배당 직접 입력`),
   );

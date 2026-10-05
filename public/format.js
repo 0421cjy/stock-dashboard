@@ -13,7 +13,7 @@ export function formatUsd(n, { sign = false } = {}) {
   return sign ? `+${body}` : body;
 }
 
-export function formatPct(ratio, { sign = false, digits = 1 } = {}) {
+export function formatPct(ratio, { sign = false, digits = 2 } = {}) {
   if (ratio == null || !Number.isFinite(ratio)) return '—';
   const pct = ratio * 100;
   // 표시 자릿수에서 0으로 반올림되는 값은 부호 없이 0으로
@@ -57,7 +57,7 @@ export function signClass(n) {
 
 // 색은 화면에 보이는 숫자를 따라야 한다: 표시에서 0으로 반올림되는 값은 칠하지 않는다.
 // 퍼센트(비율)는 formatPct와 같은 자릿수 기준, 달러는 formatUsd와 같은 $0.005 기준.
-export function pctClass(ratio, digits = 1) {
+export function pctClass(ratio, digits = 2) {
   if (ratio == null || !Number.isFinite(ratio) || Math.abs(ratio * 100) < 0.5 / 10 ** digits) return 'flat';
   return signClass(ratio);
 }

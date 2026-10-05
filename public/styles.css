@@ -178,10 +178,11 @@ button:disabled { opacity: 0.5; cursor: wait; }
 /* 요약 카드 */
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .summary.is-stale .tile-value { opacity: 0.55; }
-.tile { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.tile { container-type: inline-size; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
 .tile-label { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.02em; }
-.tile-value { font-size: var(--fs-xl); font-weight: 700; margin-top: 6px; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; }
-.tile-pct { font-size: var(--fs-title); font-weight: 600; margin-left: 8px; letter-spacing: 0; }
+/* 금액과 퍼센트는 카드 너비에 맞춰 조금 줄이고, 그래도 넘치면 퍼센트만 다음 줄로 내린다 */
+.tile-value { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; font-size: clamp(26px, 11.2cqi, var(--fs-xl)); font-weight: 700; margin-top: 6px; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; }
+.tile-pct { font-size: clamp(14px, 5.8cqi, var(--fs-title)); font-weight: 600; letter-spacing: 0; }
 .tile-sub { color: var(--muted); font-size: var(--fs-sm); margin-top: 6px; }
 .tile-krw { font-size: var(--fs-md); font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .tile-krw.flat { color: var(--ink-2); }

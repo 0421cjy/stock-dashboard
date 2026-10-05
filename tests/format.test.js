@@ -12,10 +12,11 @@ test('formatUsd는 두 자리 소수와 부호를 붙인다', () => {
   assert.equal(formatUsd(null), '—');
 });
 
-test('formatPct는 비율을 소수 첫째 자리 퍼센트로 바꾼다', () => {
-  assert.equal(formatPct(0.132, { sign: true }), '+13.2%');
-  assert.equal(formatPct(-0.008), '−0.8%');
-  assert.equal(formatPct(0.0004, { sign: true }), '0.0%');
+test('formatPct는 비율을 소수 둘째 자리 퍼센트로 바꾼다', () => {
+  assert.equal(formatPct(0.132, { sign: true }), '+13.20%');
+  assert.equal(formatPct(-0.008), '−0.80%');
+  assert.equal(formatPct(0.00636, { sign: true }), '+0.64%');
+  assert.equal(formatPct(0.00004, { sign: true }), '0.00%');
   assert.equal(formatPct(null), '—');
 });
 
@@ -66,16 +67,17 @@ test('formatPct: digits 옵션으로 소수 자릿수를 정한다(배당률처�
   assert.equal(formatPct(0.0079485, { digits: 2 }), '0.79%');
   assert.equal(formatPct(0.00004, { digits: 2 }), '0.00%');
   assert.equal(formatPct(0.102, { sign: true, digits: 2 }), '+10.20%');
-  assert.equal(formatPct(0.00017), '0.0%', '기본은 그대로 소수 첫째 자리');
+  assert.equal(formatPct(0.132, { digits: 1 }), '13.2%');
+  assert.equal(formatPct(0.00017), '0.02%', '기본은 소수 둘째 자리');
 });
 
-test('pctClass: 화면에서 0.0%로 보이는 값은 색을 칠하지 않는다', () => {
-  assert.equal(pctClass(0.0004), 'flat');   // 0.0%
-  assert.equal(pctClass(-0.0004), 'flat');  // 0.0%
-  assert.equal(pctClass(0.0006), 'up');     // +0.1%
-  assert.equal(pctClass(-0.0006), 'down');  // −0.1%
-  assert.equal(pctClass(0.00004, 2), 'flat'); // 소수 둘째 자리 표시에서 0.00%
-  assert.equal(pctClass(0.00006, 2), 'up');   // +0.01%
+test('pctClass: 화면에서 0.00%로 보이는 값은 색을 칠하지 않는다', () => {
+  assert.equal(pctClass(0.00004), 'flat');   // 0.00%
+  assert.equal(pctClass(-0.00004), 'flat');  // 0.00%
+  assert.equal(pctClass(0.00006), 'up');     // +0.01%
+  assert.equal(pctClass(-0.00006), 'down');  // −0.01%
+  assert.equal(pctClass(0.0004, 1), 'flat'); // 소수 첫째 자리 표시에서 0.0%
+  assert.equal(pctClass(0.0006, 1), 'up');   // +0.1%
   assert.equal(pctClass(null), 'flat');
 });
 
