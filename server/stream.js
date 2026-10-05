@@ -4,7 +4,7 @@ const WS_URL = 'wss://ws.finnhub.io';
 const FIRST_RETRY_MS = 1_000;
 const MAX_RETRY_MS = 60_000;
 
-export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   const counts = new Map(); // 종목 → 구독 중인 화면 수
   const latest = new Map(); // 종목 → { p, t } 마지막 체결
   const listeners = new Set();
@@ -12,6 +12,17 @@ export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket
   let open = false;
   let retryMs = 0;
   let retryTimer = null;
+
+  const wsAt = new Map(); // 종목 → Finnhub 실시간 체결을 마지막으로 받은 시각
+
+  // 구독 중인 종목의 더 새로운 체결이면 저장하고 true
+  function accept(symbol, d) {
+    if (!counts.has(symbol) || !(d?.p > 0) || !Number.isFinite(d.t)) return false;
+    const prev = latest.get(symbol);
+    if (prev && prev.t >= d.t) return false;
+    latest.set(symbol, { p: d.p, t: d.t });
+    return true;
+  }
 
   const send = (type, symbol) => {
     if (open) ws.send(JSON.stringify({ type, symbol }));
@@ -36,11 +47,8 @@ export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket
       if (msg?.type !== 'trade' || !Array.isArray(msg.data)) return;
       const changed = new Set();
       for (const d of msg.data) {
-        if (!counts.has(d?.s) || !(d.p > 0) || !Number.isFinite(d.t)) continue;
-        const prev = latest.get(d.s);
-        if (prev && prev.t > d.t) continue;
-        latest.set(d.s, { p: d.p, t: d.t });
-        changed.add(d.s);
+        if (counts.has(d?.s)) wsAt.set(d.s, now());
+        if (accept(d?.s, d)) changed.add(d.s);
       }
       for (const s of changed) for (const fn of listeners) fn(s, latest.get(s));
     };
@@ -94,6 +102,7 @@ export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket
           } else {
             counts.delete(s);
             latest.delete(s);
+            wsAt.delete(s);
             send('unsubscribe', s);
           }
         }
@@ -104,6 +113,17 @@ export function createTradeStream({ apiKey, WebSocketImpl = globalThis.WebSocket
     // 지금까지 받은 마지막 체결 { SYMBOL: { p, t } }
     snapshot(symbols) {
       return Object.fromEntries(symbols.filter((s) => latest.has(s)).map((s) => [s, latest.get(s)]));
+    },
+
+    // 구독 중인데 최근 quietMs 동안 Finnhub 실시간 체결이 오지 않은 종목(다른 곳에서 채워야 할 종목)
+    quietSymbols(quietMs) {
+      return [...counts.keys()].filter((s) => !(now() - (wsAt.get(s) ?? -Infinity) < quietMs));
+    },
+
+    // 다른 곳(Yahoo 등)에서 받은 체결을 같은 길로 흘려보낸다. 더 새로운 값일 때만 리스너에 알린다.
+    inject(symbol, trade) {
+      if (!accept(symbol, trade)) return;
+      for (const fn of listeners) fn(symbol, latest.get(symbol));
     },
   };
 }

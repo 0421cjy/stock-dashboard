@@ -53,3 +53,9 @@ test('price: 서버 오류는 UPSTREAM', async () => {
   const ext = createExtendedClient({ fetch: async () => new Response('{}', { status: 429 }) });
   await assert.rejects(ext.price('AAPL'), { code: 'UPSTREAM' });
 });
+
+test('parseRegular: 정규장 마지막 체결가와 시각(ms)', async () => {
+  const { parseRegular } = await import('../server/extended.js');
+  assert.deepEqual(parseRegular({ chart: { result: [{ meta: { regularMarketPrice: 16.01, regularMarketTime: 1_790_000_000 } }] } }), { p: 16.01, t: 1_790_000_000_000 });
+  assert.equal(parseRegular({}), null);
+});

@@ -9,6 +9,8 @@ import { createNameStore } from './names.js';
 import { createCache } from './cache.js';
 import { createExtendedClient } from './extended.js';
 import { createTradeStream } from './stream.js';
+import { startLiveFill } from './livefill.js';
+import { computeMarketStatus } from './market.js';
 
 // 내 PC에서만 접속하도록 고정한다. 바꾸지 말 것.
 const HOST = '127.0.0.1';
@@ -27,12 +29,23 @@ const finnhub = createFinnhubClient({
     persist: (key) => key === 'holidays' || /^(news|earnings|dividend):/.test(key),
   }),
 });
+const yahoo = createExtendedClient();
+const stream = createTradeStream({ apiKey });
+// Finnhub 실시간 체결이 오지 않는 종목은 정규장 동안 5초마다 Yahoo 가격으로 채운다
+startLiveFill({
+  stream,
+  yahoo,
+  isRegular: async () => {
+    const holidays = await finnhub.holidays().then((r) => r.value, () => []);
+    return computeMarketStatus(new Date(), holidays).session === 'regular';
+  },
+});
 const app = createApp({
   store,
   finnhub,
   fx,
-  extended: createExtendedClient(),
-  stream: createTradeStream({ apiKey }),
+  extended: yahoo,
+  stream,
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
   fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),
