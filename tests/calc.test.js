@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals } from '../public/calc.js';
+import { computePortfolio, parseAmount, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals, applyTrades } from '../public/calc.js';
 
 const holdings = [
   { symbol: 'AAA', shares: 10, avgCost: 100 },
@@ -163,4 +163,23 @@ test('dayTotals: 시간외 가격이 없으면 정규장 합계와 같다', () =
   assert.equal(t.dayChange, p.totals.dayChange);
   assert.equal(t.dayChangePct, p.totals.dayChangePct);
   assert.equal(t.session, null);
+});
+
+test('applyTrades: 시세보다 새 체결만 반영하고 등락을 전일 종가로 다시 계산한다', () => {
+  const quotes = {
+    A: { price: 100, prevClose: 90, change: 10, changePct: 11.1, time: 1000 },
+    B: { price: 50, prevClose: 50, change: 0, changePct: 0, time: 2000 },
+    C: { error: { code: 'NOT_FOUND' } },
+  };
+  const out = applyTrades(quotes, {
+    A: { p: 99, t: 1_500_000 },  // 시세(1000초)보다 새것
+    B: { p: 60, t: 1_000_000 },  // 시세(2000초)보다 옛것 → 무시
+    C: { p: 5, t: 9_999_999 },   // 시세 없음 → 무시
+  });
+  assert.equal(out.A.price, 99);
+  assert.equal(out.A.change, 9);
+  assert.ok(Math.abs(out.A.changePct - 10) < 1e-9);
+  assert.equal(out.A.time, 1500);
+  assert.equal(out.B, quotes.B);
+  assert.equal(out.C, quotes.C);
 });

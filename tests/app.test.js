@@ -54,7 +54,7 @@ async function listenOnFetchablePort(app) {
   }
 }
 
-async function start({ finnhub = fakeFinnhub(), fx, extended = null, now = '2026-09-28T14:00:00Z' } = {}) {
+async function start({ finnhub = fakeFinnhub(), fx, extended = null, stream = null, now = '2026-09-28T14:00:00Z' } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'stock-app-'));
   const filePath = path.join(dir, 'portfolio.json');
   let n = 0;
@@ -64,6 +64,8 @@ async function start({ finnhub = fakeFinnhub(), fx, extended = null, now = '2026
     finnhub,
     fx: fx ?? { usdKrw: async () => ({ value: { rate: 1400, date: '2026-09-25' }, stale: false }) },
     extended,
+    stream,
+    streamFlushMs: 20,
     now: () => new Date(now), // 기본: 월요일 뉴욕 10:00
     publicDir: dir,
     vendorDir: dir,
@@ -202,6 +204,34 @@ test('시간외 시세: 프리마켓에만 묻고, 못 가져온 종목은 뺀�
   ctx = await start({ extended, now: '2026-09-28T12:00:00Z' }); // 뉴욕 08:00 프리마켓
   const r = await ctx.call('GET', '/api/extended?symbols=AAPL,BAD,NONE');
   assert.deepEqual(r.body, { AAPL: { session: 'pre', price: 101, change: 1, changeRatio: 0.01, time: 1 } });
+});
+
+test('실시간 체결: 받아둔 값부터 보내고, 새 체결을 모아 보내며, 연결이 끊기면 구독을 푼다', async () => {
+  let listener = null;
+  let unsubscribed = false;
+  const stream = {
+    snapshot: (symbols) => (symbols.includes('AAPL') ? { AAPL: { p: 100, t: 1 } } : {}),
+    subscribe: (symbols, fn) => { listener = fn; return () => { unsubscribed = true; }; },
+  };
+  await ctx.close();
+  ctx = await start({ stream });
+  const ac = new AbortController();
+  const res = await fetch(`http://127.0.0.1:${ctx.port}/api/stream?symbols=AAPL,MSFT`, { signal: ac.signal });
+  assert.equal(res.headers.get('content-type'), 'text/event-stream');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  const readUntil = async (needle) => {
+    while (!text.includes(needle)) text += decoder.decode((await reader.read()).value);
+  };
+  await readUntil('"p":100');
+  listener('MSFT', { p: 50, t: 2 });
+  await readUntil('"MSFT"');
+  assert.match(text, /data: \{"MSFT":\{"p":50,"t":2\}\}/);
+  ac.abort();
+  await reader.cancel().catch(() => {});
+  for (let i = 0; i < 50 && !unsubscribed; i++) await new Promise((r) => setTimeout(r, 10));
+  assert.equal(unsubscribed, true);
 });
 
 test('환율과 키 상태', async () => {

@@ -128,6 +128,21 @@ export function mergeQuotes(prev = {}, incoming = {}) {
   return out;
 }
 
+// 실시간 체결가를 시세에 반영한다. 시세(30초 조회)보다 새로운 체결만 쓰고, 등락은 전일 종가로 다시 계산한다.
+// trades: { SYMBOL: { p, t(ms) } }. 시세가 없는 종목(전일 종가를 모름)은 건드리지 않는다.
+export function applyTrades(quotes = {}, trades = {}) {
+  const out = { ...quotes };
+  for (const [symbol, tr] of Object.entries(trades)) {
+    const q = quotes[symbol];
+    if (!(q?.price > 0) || !(tr?.p > 0)) continue;
+    if (tr.t <= (q.time ?? 0) * 1000) continue;
+    const change = q.prevClose > 0 ? tr.p - q.prevClose : q.change;
+    const changePct = q.prevClose > 0 ? (change / q.prevClose) * 100 : q.changePct;
+    out[symbol] = { ...q, price: tr.p, change, changePct, time: tr.t / 1000, stale: false };
+  }
+  return out;
+}
+
 // 화면 전체를 "지연"으로 표시할지 정한다. 캐시 값을 썼거나 일시적 오류(한도·연결)가 있을 때만
 // 지연이고, 없는 티커(NOT_FOUND)는 그 줄의 ⚠로만 알린다.
 export function quoteDelay(incoming = {}) {

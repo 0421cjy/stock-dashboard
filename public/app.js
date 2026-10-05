@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals } from './calc.js';
+import { computePortfolio, mergeQuotes, sortRows, keepFailed, quoteDelay, applyExtended, dayTotals, applyTrades } from './calc.js';
 import { statusBadge } from './status.js';
 import { icon } from './icons.js';
 import { normalizeThemePref, nextThemePref, THEME_LABEL, normalizeUpDown, toggleUpDown, UPDOWN_LABEL } from './theme.js';
@@ -28,6 +28,7 @@ export const state = {
   events: [],
   names: {},
   quotes: {},
+  trades: {}, // 실시간 체결 { SYMBOL: { p, t } } (정규장에만 시세에 반영)
   extended: {}, // 프리마켓·애프터마켓 가격 { SYMBOL: { session, price, changeRatio, ... } }
   news: [],
   newsFailed: [],
@@ -68,6 +69,8 @@ async function refreshQuotes() {
     const incoming = await api.quotes(symbols());
     for (const [s, q] of Object.entries(incoming)) if (q.name) state.names[s] = q.name;
     state.quotes = mergeQuotes(state.quotes, incoming);
+    // 30초 조회 값이 이미 받은 실시간 체결보다 옛것이면 체결가를 유지한다
+    if (state.market?.isOpen) state.quotes = applyTrades(state.quotes, state.trades);
     const values = Object.values(incoming);
     if (values.some((q) => q.price > 0 && !q.stale)) state.lastQuoteAt = new Date();
     state.quoteProblem = quoteDelay(incoming);
@@ -92,6 +95,30 @@ async function refreshExtended() {
   } catch {
     // 시간외 가격은 없어도 된다. 이전 값 유지
   }
+}
+
+// 실시간 체결(서버가 Finnhub WebSocket에서 받아 1초마다 보낸다). 보유 종목이 바뀌면 다시 연결한다.
+// 끊기면 브라우저가 알아서 다시 연결하고, 그동안은 30초 시세 조회로 버틴다.
+let tradeSource = null;
+let tradeKey = '';
+function connectTrades() {
+  const key = symbols().join(',');
+  if (tradeSource && key === tradeKey) return;
+  tradeSource?.close();
+  tradeSource = null;
+  tradeKey = key;
+  if (!key || typeof EventSource === 'undefined') return;
+  tradeSource = new EventSource(`/api/stream?symbols=${encodeURIComponent(key)}`);
+  tradeSource.onmessage = (event) => {
+    let incoming;
+    try { incoming = JSON.parse(event.data); } catch { return; }
+    Object.assign(state.trades, incoming);
+    // 프리마켓·애프터마켓 체결은 쓰지 않는다(그 시간에는 Yahoo 가격으로 따로 보여준다)
+    if (!state.market?.isOpen) return;
+    state.quotes = applyTrades(state.quotes, incoming);
+    state.lastQuoteAt = new Date();
+    render();
+  };
 }
 
 async function refreshMarket() {
@@ -166,6 +193,7 @@ export async function refreshAll() {
     render();
     return;
   }
+  connectTrades();
   // 받는 대로 그린다: 보유 종목 → 장 상태·시세·환율 → 뉴스·실적·배당.
   // 서버는 Finnhub 요청을 4개씩 처리하므로, 시세를 먼저 보내야 느린 데이터에 밀리지 않는다.
   // 환율은 Finnhub와 무관하므로 따로 받는다. 늦어도 다른 데이터를 붙잡지 않는다(그동안은 임시 환율).
@@ -184,6 +212,7 @@ export async function refreshAll() {
 
 export async function afterHoldingChange() {
   await loadPortfolio();
+  connectTrades();
   await Promise.all([refreshQuotes(), refreshExtended(), refreshSlow()]);
   render();
 }

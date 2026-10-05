@@ -35,7 +35,7 @@ async function collect(symbols, fn) {
   return { items, failed };
 }
 
-export function createApp({ store, finnhub, fx, extended = null, now = () => new Date(), publicDir, vendorDir, fontDir }) {
+export function createApp({ store, finnhub, fx, extended = null, stream = null, streamFlushMs = 1_000, now = () => new Date(), publicDir, vendorDir, fontDir }) {
   const app = express();
 
   // DNS rebinding 방어: 다른 도메인 이름으로 들어온 요청(악성 사이트가 자기 도메인을
@@ -177,6 +177,32 @@ export function createApp({ store, finnhub, fx, extended = null, now = () => new
       }
     }));
     res.json(Object.fromEntries(entries.filter(Boolean)));
+  });
+
+  // 실시간 체결을 화면으로 흘려보낸다(Server-Sent Events). 1초에 한 번, 그사이 바뀐 종목의 마지막 체결만 보낸다.
+  // data: { SYMBOL: { p: 가격, t: 체결 시각(ms) } }
+  app.get('/api/stream', (req, res) => {
+    const symbols = parseSymbols(req.query.symbols);
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    res.write(': connected\n\n');
+    if (!stream || !symbols.length) return; // 연결은 열어두되 보낼 것이 없다
+
+    let pending = stream.snapshot(symbols);
+    const flush = () => {
+      if (!Object.keys(pending).length) return;
+      res.write(`data: ${JSON.stringify(pending)}\n\n`);
+      pending = {};
+    };
+    flush();
+    const unsubscribe = stream.subscribe(symbols, (symbol, trade) => { pending[symbol] = trade; });
+    const timer = setInterval(flush, streamFlushMs);
+    // 프록시·브라우저가 조용한 연결을 끊지 않도록 가끔 주석을 보낸다
+    const keepAlive = setInterval(() => res.write(': ping\n\n'), 25_000);
+    req.on('close', () => {
+      clearInterval(timer);
+      clearInterval(keepAlive);
+      unsubscribe();
+    });
   });
 
   app.use('/api', (req, res) => {

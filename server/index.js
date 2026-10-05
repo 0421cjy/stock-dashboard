@@ -8,6 +8,7 @@ import { createFxClient } from './fx.js';
 import { createNameStore } from './names.js';
 import { createCache } from './cache.js';
 import { createExtendedClient } from './extended.js';
+import { createTradeStream } from './stream.js';
 
 // 내 PC에서만 접속하도록 고정한다. 바꾸지 말 것.
 const HOST = '127.0.0.1';
@@ -31,6 +32,7 @@ const app = createApp({
   finnhub,
   fx,
   extended: createExtendedClient(),
+  stream: createTradeStream({ apiKey }),
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
   fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),
