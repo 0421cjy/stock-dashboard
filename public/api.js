@@ -41,4 +41,5 @@ export const api = {
   fx: () => call('GET', '/api/fx'),
   marketStatus: () => call('GET', '/api/market-status'),
   extended: (symbols) => call('GET', `/api/extended?symbols=${list(symbols)}`),
+  history: (range) => call('GET', `/api/history?range=${seg(range)}`),
 };

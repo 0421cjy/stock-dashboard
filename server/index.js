@@ -11,6 +11,8 @@ import { createExtendedClient } from './extended.js';
 import { createTradeStream } from './stream.js';
 import { startLiveFill } from './livefill.js';
 import { computeMarketStatus } from './market.js';
+import { createHistoryStore } from './history.js';
+import { dateInZone } from '../public/dday.js';
 
 // 내 PC에서만 접속하도록 고정한다. 바꾸지 말 것.
 const HOST = '127.0.0.1';
@@ -40,12 +42,25 @@ startLiveFill({
     return computeMarketStatus(new Date(), holidays).session === 'regular';
   },
 });
+// 총 평가금액 추이용 날짜별 보유 종목 기록. 켜 있는 동안 10분마다(바뀐 게 있을 때만) 오늘 날짜로 남긴다.
+const history = createHistoryStore({ filePath: path.join(root, 'data', 'history.json') });
+async function recordToday() {
+  try {
+    history.record(dateInZone(new Date(), 'America/New_York'), (await store.read()).holdings);
+  } catch {
+    // 보유 종목 파일을 못 읽으면 다음 차례에
+  }
+}
+recordToday();
+setInterval(recordToday, 10 * 60_000);
+
 const app = createApp({
   store,
   finnhub,
   fx,
   extended: yahoo,
   stream,
+  history,
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
   fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),

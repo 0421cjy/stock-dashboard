@@ -225,6 +225,23 @@ button:disabled { opacity: 0.5; cursor: wait; }
 /* 차트 */
 .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .chart-box { position: relative; height: 260px; }
+
+/* 총 평가금액 추이 */
+.history-head { flex-wrap: wrap; }
+.history-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+/* 붙어 있는 선택 버튼 묶음(기간·통화) */
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.seg button { border: none; border-radius: 0; padding: 5px 10px; font-size: var(--fs-sm); background: transparent; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--primary-bg); color: #fff; }
+.history-summary { min-height: 52px; margin-bottom: 8px; }
+.history-value { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.history-other { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; margin-left: 10px; letter-spacing: 0; }
+.history-change { font-size: var(--fs-md); font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.history-period { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; margin-left: 8px; }
+.history-empty { color: var(--muted); font-size: var(--fs-sm); padding-top: 14px; }
+.history-box { height: 240px; }
+.history-note { color: var(--muted); font-size: var(--fs-xs); margin: 8px 0 0; }
 .chart-empty { color: var(--muted); }
 .h2-sub { color: var(--muted); font-size: var(--fs-xs); font-weight: 500; margin-left: 6px; }
 

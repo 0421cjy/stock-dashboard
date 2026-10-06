@@ -54,7 +54,7 @@ async function listenOnFetchablePort(app) {
   }
 }
 
-async function start({ finnhub = fakeFinnhub(), fx, extended = null, stream = null, now = '2026-09-28T14:00:00Z' } = {}) {
+async function start({ finnhub = fakeFinnhub(), fx, extended = null, stream = null, history = null, now = '2026-09-28T14:00:00Z' } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'stock-app-'));
   const filePath = path.join(dir, 'portfolio.json');
   let n = 0;
@@ -65,6 +65,7 @@ async function start({ finnhub = fakeFinnhub(), fx, extended = null, stream = nu
     fx: fx ?? { usdKrw: async () => ({ value: { rate: 1400, date: '2026-09-25' }, stale: false }) },
     extended,
     stream,
+    history,
     streamFlushMs: 20,
     now: () => new Date(now), // 기본: 월요일 뉴욕 10:00
     publicDir: dir,
@@ -232,6 +233,35 @@ test('실시간 체결: 받아둔 값부터 보내고, 새 체결을 모아 보�
   await reader.cancel().catch(() => {});
   for (let i = 0; i < 50 && !unsubscribed; i++) await new Promise((r) => setTimeout(r, 10));
   assert.equal(unsubscribed, true);
+});
+
+test('자산 추이: 보유 종목을 기록하고, 1d는 전일 종가 기준과 원화를 함께 준다', async () => {
+  const recorded = [];
+  const history = {
+    record: async (date, holdings) => { recorded.push([date, holdings.map((h) => `${h.symbol}:${h.shares}`)]); },
+    snapshots: () => [{ date: '2026-09-28', holdings: [{ symbol: 'AAA', shares: 2 }] }],
+  };
+  const extended = {
+    history: async (s, range) => ({ value: { previousClose: 9, bars: [{ t: 1000, date: '2026-09-28', close: 10 }, { t: 2000, date: '2026-09-28', close: 11 }] } }),
+  };
+  const fx = {
+    usdKrw: async () => ({ value: { rate: 1400, date: '2026-09-25' }, stale: false }),
+    usdKrwSince: async () => ({ value: { '2026-09-25': 1290, '2026-09-27': 1300 } }),
+  };
+  await ctx.close();
+  ctx = await start({ history, extended, fx });
+  await ctx.call('POST', '/api/holdings', { symbol: 'AAA', shares: 2, avgCost: 5 });
+  assert.deepEqual(recorded, [['2026-09-28', ['AAA:2']]]);
+
+  const r = await ctx.call('GET', '/api/history?range=1d');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.points, [
+    { t: 1000, date: '2026-09-28', value: 20, krw: 28000, estimated: false },
+    { t: 2000, date: '2026-09-28', value: 22, krw: 30800, estimated: false },
+  ]);
+  assert.deepEqual(r.body.base, { value: 18, krw: 18 * 1300 });
+  assert.equal(r.body.recordedSince, '2026-09-28');
+  assert.equal((await ctx.call('GET', '/api/history?range=10y')).status, 400);
 });
 
 test('환율과 키 상태', async () => {

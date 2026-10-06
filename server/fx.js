@@ -1,7 +1,8 @@
 import { AppError } from './errors.js';
 import { createCache } from './cache.js';
 
-const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW';
+const FX_BASE = 'https://api.frankfurter.dev/v1';
+const FX_URL = `${FX_BASE}/latest?base=USD&symbols=KRW`;
 const FX_TTL = 21_600_000;
 const FX_TIMEOUT_MS = 5_000;
 
@@ -20,6 +21,23 @@ export function createFxClient({ fetch = globalThis.fetch, now = Date.now, cache
         const rate = data?.rates?.KRW;
         if (!(rate > 0)) throw new AppError('UPSTREAM', '환율 응답 형식이 올바르지 않습니다.', 502);
         return { rate, date: data.date };
+      });
+    },
+
+    // from(YYYY-MM-DD)부터 오늘까지 날짜별 기준환율 { 'YYYY-MM-DD': rate } (영업일만)
+    usdKrwSince(from) {
+      return cache.get(`usdkrw:${from}`, FX_TTL, async () => {
+        let res;
+        try {
+          res = await fetch(`${FX_BASE}/${from}..?base=USD&symbols=KRW`, { signal: AbortSignal.timeout(FX_TIMEOUT_MS) });
+        } catch {
+          throw new AppError('UPSTREAM', '환율 서버에 연결할 수 없습니다.', 502);
+        }
+        if (!res.ok) throw new AppError('UPSTREAM', `환율 서버 오류가 발생했습니다. (${res.status})`, 502);
+        const data = await res.json();
+        const out = {};
+        for (const [date, r] of Object.entries(data?.rates ?? {})) if (r?.KRW > 0) out[date] = r.KRW;
+        return out;
       });
     },
   };

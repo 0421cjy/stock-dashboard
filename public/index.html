@@ -36,6 +36,28 @@
     <div class="col-main">
       <section id="summary" class="summary" aria-label="요약"></section>
 
+      <section class="card history" id="history-card">
+        <div class="card-head history-head">
+          <h2>총 평가금액 추이</h2>
+          <div class="history-controls">
+            <div class="seg" id="history-range" role="group" aria-label="기간">
+              <button type="button" data-range="1d">1일</button>
+              <button type="button" data-range="1w">1주</button>
+              <button type="button" data-range="1m">1개월</button>
+              <button type="button" data-range="3m">3개월</button>
+              <button type="button" data-range="1y">1년</button>
+            </div>
+            <div class="seg" id="history-currency" role="group" aria-label="통화">
+              <button type="button" data-currency="usd">$</button>
+              <button type="button" data-currency="krw">₩</button>
+            </div>
+          </div>
+        </div>
+        <div id="history-summary" class="history-summary" aria-live="polite"></div>
+        <div class="chart-box history-box"><canvas id="history-chart" aria-label="총 평가금액 추이"></canvas></div>
+        <p id="history-note" class="history-note" hidden></p>
+      </section>
+
       <section class="card">
         <div class="table-wrap">
           <table class="holdings">

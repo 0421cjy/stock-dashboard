@@ -73,7 +73,37 @@ export function createExtendedClient({ fetch = globalThis.fetch, now = Date.now,
     regular(symbol) {
       return cache.get(`reg:${symbol}`, REGULAR_TTL, async () => parseRegular(await chart(symbol, 'interval=1d&range=1d')));
     },
+    // 기간별 가격 막대(정규장) { previousClose, bars: [{ t(ms), date(뉴욕), close }] }
+    history(symbol, range) {
+      const r = HISTORY_RANGES[range];
+      if (!r) return Promise.reject(new AppError('VALIDATION', '지원하지 않는 기간입니다.', 400));
+      return cache.get(`hist:${range}:${symbol}`, r.ttl, async () => parseHistory(await chart(symbol, `range=${r.range}&interval=${r.interval}`)));
+    },
   };
+}
+
+// 그래프 기간 → Yahoo 조회 범위·간격과 캐시 시간
+export const HISTORY_RANGES = {
+  '1d': { range: '1d', interval: '5m', ttl: 60_000 },
+  '1w': { range: '5d', interval: '30m', ttl: 300_000 },
+  '1m': { range: '1mo', interval: '1d', ttl: 1_800_000 },
+  '3m': { range: '3mo', interval: '1d', ttl: 1_800_000 },
+  '1y': { range: '1y', interval: '1d', ttl: 1_800_000 },
+};
+
+const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+// Yahoo 차트 응답 → { previousClose, bars } (가격이 비어 있는 막대는 뺀다)
+export function parseHistory(data) {
+  const r = data?.chart?.result?.[0];
+  const ts = r?.timestamp ?? [];
+  const closes = r?.indicators?.quote?.[0]?.close ?? [];
+  const bars = [];
+  ts.forEach((t, i) => {
+    if (closes[i] > 0) bars.push({ t: t * 1000, date: nyDate.format(new Date(t * 1000)), close: closes[i] });
+  });
+  const pc = r?.meta?.chartPreviousClose;
+  return { previousClose: pc > 0 ? pc : null, bars };
 }
 
 // Yahoo 차트 응답 → 정규장 마지막 체결 { p, t(ms) } 또는 null

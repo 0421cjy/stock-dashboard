@@ -3,6 +3,8 @@ import { AppError } from './errors.js';
 import { normalizeSymbol, validateHoldingFields } from './store.js';
 import { computeMarketStatus } from './market.js';
 import { dateInZone, addDays } from '../public/dday.js';
+import { HISTORY_RANGES } from './extended.js';
+import { holdingsResolver, buildSeries, fxResolver, lateListed } from './history.js';
 
 const NY = 'America/New_York';
 const MAX_SYMBOLS = 30;
@@ -35,8 +37,15 @@ async function collect(symbols, fn) {
   return { items, failed };
 }
 
-export function createApp({ store, finnhub, fx, extended = null, stream = null, streamFlushMs = 1_000, now = () => new Date(), publicDir, vendorDir, fontDir }) {
+export function createApp({ store, finnhub, fx, extended = null, stream = null, history = null, streamFlushMs = 1_000, now = () => new Date(), publicDir, vendorDir, fontDir }) {
   const app = express();
+
+  // 오늘(뉴욕 날짜)의 보유 종목을 자산 추이 기록에 남긴다
+  async function recordHoldings() {
+    if (!history) return;
+    const { holdings } = await store.read();
+    await history.record(dateInZone(now(), NY), holdings);
+  }
 
   // DNS rebinding 방어: 다른 도메인 이름으로 들어온 요청(악성 사이트가 자기 도메인을
   // 127.0.0.1로 돌려놓은 경우)은 보유 내역에 닿기 전에 막는다.
@@ -73,11 +82,14 @@ export function createApp({ store, finnhub, fx, extended = null, stream = null, 
       // 키 없음·한도 초과·연결 실패로 확인할 수 없으면 이름 없이 저장한다.
     }
     const holding = await store.addHolding({ ...body, symbol });
+    await recordHoldings();
     res.status(201).json({ ...holding, name });
   });
 
   app.put('/api/holdings/:symbol', async (req, res) => {
-    res.json(await store.updateHolding(req.params.symbol, req.body ?? {}));
+    const holding = await store.updateHolding(req.params.symbol, req.body ?? {});
+    await recordHoldings();
+    res.json(holding);
   });
 
   // ETF 등 자동 배당 데이터가 없는 종목의 1주당 연 배당 직접 입력. null이면 지운다.
@@ -87,6 +99,7 @@ export function createApp({ store, finnhub, fx, extended = null, stream = null, 
 
   app.delete('/api/holdings/:symbol', async (req, res) => {
     await store.removeHolding(req.params.symbol);
+    await recordHoldings();
     res.status(204).end();
   });
 
@@ -177,6 +190,63 @@ export function createApp({ store, finnhub, fx, extended = null, stream = null, 
       }
     }));
     res.json(Object.fromEntries(entries.filter(Boolean)));
+  });
+
+  // 총 평가금액 추이. range: 1d(5분) | 1w(30분) | 1m·3m·1y(일별 종가)
+  // { range, points: [{ t, date, value, krw, estimated }], base: { value, krw } | null, recordedSince, listedLate: [{ symbol, since }] }
+  // base는 1d에서 전일 종가 기준 평가금액(오늘 등락의 기준). 원화는 그날의 기준환율(오늘은 지금 환율)로 바꾼다.
+  app.get('/api/history', async (req, res) => {
+    const range = String(req.query.range ?? '1m');
+    if (!extended?.history || !HISTORY_RANGES[range]) throw new AppError('VALIDATION', '지원하지 않는 기간입니다.', 400);
+
+    const { holdings } = await store.read();
+    const snapshots = history?.snapshots() ?? [];
+    // 기간 안에 갖고 있었던 종목까지 함께 받는다(지금은 판 종목 포함)
+    const symbols = [...new Set([...holdings, ...snapshots.flatMap((s) => s.holdings)].map((h) => h.symbol))].slice(0, MAX_SYMBOLS);
+    const bars = {};
+    const previousClose = {};
+    await Promise.all(symbols.map(async (s) => {
+      try {
+        const v = (await extended.history(s, range)).value;
+        bars[s] = v.bars;
+        previousClose[s] = v.previousClose;
+      } catch {
+        // 못 받은 종목은 빼고 그린다
+      }
+    }));
+
+    const resolve = holdingsResolver(snapshots, holdings);
+    const points = buildSeries(bars, resolve);
+    // 기간 중 상장해 그 전에는 0으로 계산한 종목(지금 보유 중인 것만 알린다)
+    const late = lateListed(bars);
+    const listedLate = holdings.filter((h) => late[h.symbol]).map((h) => ({ symbol: h.symbol, since: late[h.symbol] }));
+
+    let current = null;
+    try { current = (await fx.usdKrw()).value.rate; } catch { /* 원화 없이 */ }
+    let rates = {};
+    if (points.length) {
+      try { rates = (await fx.usdKrwSince(addDays(points[0].date, -7))).value; } catch { /* 지금 환율로 */ }
+    }
+    const fxAt = fxResolver(rates, current);
+    const krw = (value, date) => {
+      const rate = fxAt(date);
+      return rate > 0 ? value * rate : null;
+    };
+
+    let base = null;
+    if (range === '1d' && points.length) {
+      const { holdings: held } = resolve(points[0].date);
+      const value = held.reduce((sum, h) => sum + h.shares * (previousClose[h.symbol] ?? NaN), 0);
+      if (Number.isFinite(value)) base = { value, krw: krw(value, addDays(points[0].date, -1)) };
+    }
+
+    res.json({
+      range,
+      points: points.map((p) => ({ t: p.t, date: p.date, value: p.value, krw: krw(p.value, p.date), estimated: p.estimated })),
+      base,
+      recordedSince: snapshots[0]?.date ?? null,
+      listedLate,
+    });
   });
 
   // 실시간 체결을 화면으로 흘려보낸다(Server-Sent Events). 1초에 한 번, 그사이 바뀐 종목의 마지막 체결만 보낸다.
