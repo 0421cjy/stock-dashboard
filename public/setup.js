@@ -5,7 +5,7 @@ import { openHoldingDialog, openEventDialog, openDpsDialog, confirmDialog } from
 import { createCharts } from './views/charts.js';
 import { createHeatmap } from './views/heatmap.js';
 import { flatColors } from './treemap.js';
-import { buildDdayList, dateInZone } from './dday.js';
+import { buildDdayList, dateInZone, addDays } from './dday.js';
 import { renderDday } from './views/events.js';
 import { renderNews } from './views/news.js';
 import { computeDividends } from './dividends.js';
@@ -222,7 +222,7 @@ addRenderer((portfolio) => {
     const now = { t: Date.now(), value: live, krw: state.fx?.rate > 0 ? live * state.fx.rate : null };
     points = hist.range === '1d' || hist.range === '1w'
       ? withLivePoint(points, now)
-      : withLiveToday(points, now, dateInZone(new Date(), 'America/New_York'));
+      : withLiveToday(points, now, addDays(dateInZone(new Date(), 'America/New_York'), hist.range === '1y' ? -6 : 0));
   }
   const valueKey = hist.currency === 'krw' ? 'krw' : 'value';
   const base = data?.base ?? null;

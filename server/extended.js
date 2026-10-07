@@ -77,24 +77,26 @@ export function createExtendedClient({ fetch = globalThis.fetch, now = Date.now,
     history(symbol, range) {
       const r = HISTORY_RANGES[range];
       if (!r) return Promise.reject(new AppError('VALIDATION', '지원하지 않는 기간입니다.', 400));
-      return cache.get(`hist:${range}:${symbol}`, r.ttl, async () => parseHistory(await chart(symbol, `range=${r.range}&interval=${r.interval}`)));
+      return cache.get(`hist:${range}:${symbol}`, r.ttl, async () => parseHistory(await chart(symbol, `range=${r.range}&interval=${r.interval}`), r.stepMs));
     },
   };
 }
 
-// 그래프 기간 → Yahoo 조회 범위·간격과 캐시 시간
+// 그래프 기간 → Yahoo 조회 범위·간격(stepMs)과 캐시 시간. 그래프가 너무 촘촘하지 않게 기간마다 50개 안팎의 점이 되도록 잡는다.
 export const HISTORY_RANGES = {
-  '1d': { range: '1d', interval: '5m', ttl: 60_000 },
-  '1w': { range: '5d', interval: '30m', ttl: 300_000 },
-  '1m': { range: '1mo', interval: '1d', ttl: 1_800_000 },
-  '3m': { range: '3mo', interval: '1d', ttl: 1_800_000 },
-  '1y': { range: '1y', interval: '1d', ttl: 1_800_000 },
+  '1d': { range: '1d', interval: '15m', stepMs: 15 * 60_000, ttl: 60_000 },
+  '1w': { range: '5d', interval: '60m', stepMs: 60 * 60_000, ttl: 300_000 },
+  '1m': { range: '1mo', interval: '1d', stepMs: 86_400_000, ttl: 1_800_000 },
+  '3m': { range: '3mo', interval: '1d', stepMs: 86_400_000, ttl: 1_800_000 },
+  '1y': { range: '1y', interval: '1wk', stepMs: 7 * 86_400_000, ttl: 1_800_000 },
 };
 
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 // Yahoo 차트 응답 → { previousClose, bars } (가격이 비어 있는 막대는 뺀다)
-export function parseHistory(data) {
+// 장중에는 진행 중인 막대 뒤에 '지금' 시각의 막대가 하나 더 붙는데, 종목마다 시각이 몇 초씩 달라
+// 그래프 끝이 들쭉날쭉해진다. 앞 막대와 간격(stepMs)보다 가까운 마지막 막대는 버린다(진행 중인 막대에 이미 최신 가격이 있다).
+export function parseHistory(data, stepMs = 0) {
   const r = data?.chart?.result?.[0];
   const ts = r?.timestamp ?? [];
   const closes = r?.indicators?.quote?.[0]?.close ?? [];
@@ -102,6 +104,10 @@ export function parseHistory(data) {
   ts.forEach((t, i) => {
     if (closes[i] > 0) bars.push({ t: t * 1000, date: nyDate.format(new Date(t * 1000)), close: closes[i] });
   });
+  if (stepMs && bars.length >= 2 && bars.at(-1).t - bars.at(-2).t < stepMs) {
+    bars.at(-2).close = bars.at(-1).close; // 최신 가격은 살린다
+    bars.pop();
+  }
   const pc = r?.meta?.chartPreviousClose;
   return { previousClose: pc > 0 ? pc : null, bars };
 }

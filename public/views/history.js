@@ -49,9 +49,9 @@ export function createHistoryChart(canvas) {
       labels: [],
       datasets: [
         // 기록 구간(실제 보유 수량)
-        { data: [], borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15, fill: 'origin', spanGaps: false },
+        { data: [], borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, cubicInterpolationMode: 'monotone', fill: 'origin', spanGaps: false },
         // 추정 구간(지금 보유 수량으로 계산): 점선·흐린 색
-        { data: [], borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, tension: 0.15, fill: false, spanGaps: false },
+        { data: [], borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, cubicInterpolationMode: 'monotone', fill: false, spanGaps: false },
       ],
     },
     options: {

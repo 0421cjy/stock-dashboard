@@ -50,4 +50,5 @@ test('withLiveToday: 마지막 점이 오늘이면 지금 값으로 바꾼다', 
   const out = withLiveToday(pts, { t: 9, value: 95, krw: 126_000 }, 'd4');
   assert.deepEqual(out.at(-1), { t: 4, date: 'd4', value: 95, krw: 126_000, estimated: false });
   assert.equal(withLiveToday(pts, { value: 95 }, 'd5'), pts);
+  assert.equal(withLiveToday(pts, { value: 95, krw: 1 }, 'd3').at(-1).value, 95, '주봉: 마지막 막대가 since 이후면 바꾼다');
 });

@@ -73,3 +73,13 @@ test('buildSeries: 기간 중 상장한 종목은 상장 전을 0으로 계산�
   assert.deepEqual(buildSeries(bars, resolve).map((p) => p.value), [10, 10, 10, 110]);
   assert.deepEqual(lateListed(bars), { NEW: 'd4' });
 });
+
+test('parseHistory: 간격보다 가까운 마지막 막대(지금 시각)는 앞 막대에 최신 가격을 넘기고 버린다', () => {
+  const data = { chart: { result: [{
+    meta: {},
+    timestamp: [1_000, 1_900, 2_100],
+    indicators: { quote: [{ close: [10, 11, 12] }] },
+  }] } };
+  assert.deepEqual(parseHistory(data, 900_000).bars.map((b) => [b.t, b.close]), [[1_000_000, 10], [1_900_000, 12]]);
+  assert.equal(parseHistory(data).bars.length, 3, '간격을 모르면 그대로');
+});

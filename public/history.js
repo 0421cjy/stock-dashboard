@@ -9,9 +9,10 @@ export function withLivePoint(points, live) {
   return [...points, { ...live, date: points.at(-1).date, estimated: false }];
 }
 
-// 일별 그래프의 오늘 점(뉴욕 날짜가 today)을 지금 평가금액으로 바꾼다(서버의 일봉은 최대 30분 전 값).
-export function withLiveToday(points, live, today) {
-  if (!live || !(live.value > 0) || !points.length || points.at(-1).date !== today) return points;
+// 일별·주별 그래프의 마지막 점이 지금 진행 중인 날(주)이면 지금 평가금액으로 바꾼다(서버 값은 최대 30분 전).
+// since: 이 날짜 이후에 시작한 막대만 '진행 중'으로 본다(일봉은 오늘, 주봉은 6일 전부터).
+export function withLiveToday(points, live, since) {
+  if (!live || !(live.value > 0) || !points.length || points.at(-1).date < since) return points;
   return [...points.slice(0, -1), { ...points.at(-1), value: live.value, krw: live.krw ?? points.at(-1).krw }];
 }
 
