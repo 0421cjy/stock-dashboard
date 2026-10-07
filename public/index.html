@@ -38,7 +38,12 @@
 
       <section class="card history" id="history-card">
         <div class="card-head history-head">
-          <h2>총 평가금액 추이</h2>
+          <div class="title-row">
+            <h2>총 평가금액 추이</h2>
+            <span id="history-help" class="help" tabindex="0" role="button" aria-label="그래프 설명" aria-describedby="history-help-text" hidden>
+              <span id="history-help-text" class="help-tip" role="tooltip"></span>
+            </span>
+          </div>
           <div class="history-controls">
             <div class="seg" id="history-range" role="group" aria-label="기간">
               <button type="button" data-range="1d">1일</button>
@@ -55,7 +60,6 @@
         </div>
         <div id="history-summary" class="history-summary" aria-live="polite"></div>
         <div class="chart-box history-box"><canvas id="history-chart" aria-label="총 평가금액 추이"></canvas></div>
-        <p id="history-note" class="history-note" hidden></p>
       </section>
 
       <section class="card">
