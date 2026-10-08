@@ -12,7 +12,6 @@ import { computeDividends } from './dividends.js';
 import { renderDividends } from './views/dividends.js';
 import { createHistoryChart, renderHistorySummary } from './views/history.js';
 import { RANGES, withLivePoint, withLiveToday, periodChange } from './history.js';
-import { icon } from './icons.js';
 
 // 종목별 색: 전체 보유 종목 기준으로 한 번 정해 트리맵과 뉴스 태그가 같은 색을 쓴다.
 const holdingColors = () => flatColors(state.holdings.map((h) => h.symbol));
@@ -231,20 +230,4 @@ addRenderer((portfolio) => {
     points, base, range: hist.range, key: valueKey, loading: hist.loading, error: hist.error,
   });
   historyChart.update({ points, range: hist.range, key: valueKey, change: periodChange(points, base, valueKey) });
-
-  const notes = [];
-  if (points.some((p) => p.estimated)) {
-    notes.push(data?.recordedSince
-      ? `점선은 기록을 시작한 ${data.recordedSince} 이전 구간으로, 지금 보유 수량을 그대로 갖고 있었다고 가정한 추정치입니다.`
-      : '점선은 지금 보유 수량을 그대로 갖고 있었다고 가정한 추정치입니다.');
-  }
-  for (const { symbol, since } of data?.listedLate ?? []) notes.push(`${symbol}은(는) 가격이 시작된 ${since} 이전을 0으로 계산했습니다.`);
-  if (hist.currency === 'krw' && points.length) notes.push('원화는 날짜별 기준환율로 환산했습니다.');
-  // 설명은 제목 옆 ? 아이콘에 마우스를 올리거나 키보드로 들어가면 보인다
-  const tip = document.getElementById('history-help-text');
-  tip.replaceChildren(...notes.map((n) => Object.assign(document.createElement('p'), { textContent: n })));
-  document.getElementById('history-help').hidden = notes.length === 0;
 });
-
-// ? 아이콘 그리기(한 번)
-document.getElementById('history-help').prepend(icon('help', 15));

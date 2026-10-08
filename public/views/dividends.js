@@ -2,7 +2,7 @@ import { h } from './dom.js';
 import { formatUsd, formatPct, formatKrwFromUsd } from '../format.js';
 import { icon } from '../icons.js';
 
-// 배당금 카드: 요약(연·월 배당금, 배당률) + 종목별 표 + 배당 없는 종목 한 줄.
+// 배당금 카드: 요약(연·월 배당금, 배당률) + 종목별 표.
 export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate, hasHoldings, onEdit, loading = false }) {
   // 배당 지표를 받기 전에는 모든 종목이 '데이터 없음'으로 보이지 않게 '불러오는 중'
   if (loading) {
@@ -15,7 +15,7 @@ export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate,
     footEl.hidden = true;
     return;
   }
-  const { rows, noneSymbols, missingCount, totals } = result;
+  const { rows, totals } = result;
 
   summaryEl.replaceChildren(
     stat('연간 예상 배당금', formatUsd(totals.annual), formatKrwFromUsd(totals.annual, fxRate)),
@@ -26,12 +26,9 @@ export function renderDividends({ summaryEl, bodyEl, footEl }, result, { fxRate,
 
   bodyEl.replaceChildren(...rows.map((r) => (r.source === 'missing' ? missingRow(r, onEdit) : payingRow(r, fxRate, onEdit))));
 
-  const notes = [];
-  if (!hasHoldings) notes.push('종목을 추가하면 예상 배당금이 보입니다.');
-  if (noneSymbols.length) notes.push(`배당 없음: ${noneSymbols.join(', ')}`);
-  if (missingCount) notes.push(`자동 데이터가 없는 ${missingCount}개 종목은 직접 입력해야 합계에 들어갑니다.`);
-  footEl.hidden = !notes.length;
-  footEl.textContent = notes.join(' · ');
+  // 종목이 하나도 없을 때만 안내한다
+  footEl.hidden = hasHoldings;
+  footEl.textContent = hasHoldings ? '' : '종목을 추가하면 예상 배당금이 보입니다.';
 }
 
 function stat(label, value, sub) {
