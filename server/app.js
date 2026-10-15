@@ -37,7 +37,7 @@ async function collect(symbols, fn) {
   return { items, failed };
 }
 
-export function createApp({ store, finnhub, fx, extended = null, stream = null, history = null, streamFlushMs = 1_000, now = () => new Date(), publicDir, vendorDir, fontDir }) {
+export function createApp({ store, finnhub, fx, extended = null, stream = null, history = null, earningsSeen = null, streamFlushMs = 1_000, now = () => new Date(), publicDir, vendorDir, fontDir }) {
   const app = express();
 
   // 오늘(뉴욕 날짜)의 보유 종목을 자산 추이 기록에 남긴다
@@ -147,6 +147,8 @@ export function createApp({ store, finnhub, fx, extended = null, stream = null, 
     const from = dateInZone(now(), NY);
     const to = addDays(from, EARNINGS_DAYS);
     const result = await collect(parseSymbols(req.query.symbols), (s) => finnhub.earnings(s, { from, to }));
+    // 같은 분기 발표가 날짜만 바뀌어 두 번 오면 새 일정 하나만 남긴다
+    if (earningsSeen) result.items = earningsSeen.pick(result.items);
     result.items.sort((a, b) => a.date.localeCompare(b.date));
     res.json(result);
   });

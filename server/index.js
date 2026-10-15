@@ -13,6 +13,8 @@ import { startLiveFill } from './livefill.js';
 import { computeMarketStatus } from './market.js';
 import { createHistoryStore } from './history.js';
 import { dateInZone } from '../public/dday.js';
+import { createEarningsSeen, seenFromCache } from './earnings-seen.js';
+import { readFileSync } from 'node:fs';
 
 // 내 PC에서만 접속하도록 고정한다. 바꾸지 말 것.
 const HOST = '127.0.0.1';
@@ -22,13 +24,27 @@ const apiKey = (process.env.FINNHUB_API_KEY ?? '').trim();
 
 const fx = createFxClient();
 const store = createStore({ filePath: path.join(root, 'data', 'portfolio.json') });
+const cachePath = path.join(root, 'data', 'cache.json');
+
+// 실적 날짜별 처음 본 시각. 처음 만들 때는 캐시 파일에 쌓인 예전 실적 기록으로 채운다(오래된 기록이 지워지기 전에).
+const earningsSeen = createEarningsSeen({ filePath: path.join(root, 'data', 'earnings-seen.json') });
+if (earningsSeen.isEmpty()) {
+  try {
+    earningsSeen.seed(seenFromCache(JSON.parse(readFileSync(cachePath, 'utf8'))));
+  } catch {
+    // 캐시 파일이 없으면 지금부터 기록한다
+  }
+}
+
 // 뉴스·실적·배당·휴장일은 파일에도 저장해, 서버를 다시 켜도 유효 시간 안이면 Finnhub에 다시 묻지 않는다.
+// 이틀이 지난 기록은 지운다(가장 긴 유효 시간이 하루).
 const finnhub = createFinnhubClient({
   apiKey,
   names: createNameStore({ filePath: path.join(root, 'data', 'names.json') }),
   cache: createCache({
-    filePath: path.join(root, 'data', 'cache.json'),
+    filePath: cachePath,
     persist: (key) => key === 'holidays' || /^(news|earnings|dividend):/.test(key),
+    maxAgeMs: 2 * 86_400_000,
   }),
 });
 const yahoo = createExtendedClient();
@@ -61,6 +77,7 @@ const app = createApp({
   extended: yahoo,
   stream,
   history,
+  earningsSeen,
   publicDir: path.join(root, 'public'),
   vendorDir: path.join(root, 'node_modules', 'chart.js', 'dist'),
   fontDir: path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'variable'),

@@ -172,7 +172,7 @@ test('earnings: 일정을 바꿔 담고, 비어 있으면 빈 배열', async () 
   const fetch = fakeFetch(() => ({ body }));
   const fh = createFinnhubClient({ apiKey: 'k', fetch, now: clock() });
   const r = await fh.earnings('SOFI', { from: '2026-09-28', to: '2026-12-27' });
-  assert.deepEqual(r.value, [{ symbol: 'SOFI', date: '2026-10-27', hour: 'bmo', epsEstimate: 0.12 }]);
+  assert.deepEqual(r.value, [{ symbol: 'SOFI', date: '2026-10-27', hour: 'bmo', epsEstimate: 0.12, year: 2026, quarter: 3 }]);
   assert.equal(fetch.calls[0].url.pathname, '/api/v1/calendar/earnings');
   body = { earningsCalendar: null };
   assert.deepEqual((await fh.earnings('AAPL', { from: '2026-09-28', to: '2026-12-27' })).value, []);

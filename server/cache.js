@@ -4,15 +4,17 @@ import path from 'node:path';
 
 // TTL 캐시. 동시 요청을 합치고, 실패하면 마지막 성공 값을 stale로 돌려준다.
 // filePath와 persist(key → boolean)를 주면 그 키들은 파일에도 저장해, 서버를 다시 켜도 TTL 안이면 그대로 쓴다.
-export function createCache({ now = Date.now, filePath = null, persist = () => false } = {}) {
+// maxAgeMs: 파일에 저장하는 키 중 이보다 오래된 것은 지운다(뉴스·실적은 날짜가 키에 들어가 매일 새 키가 생긴다).
+export function createCache({ now = Date.now, filePath = null, persist = () => false, maxAgeMs = Infinity } = {}) {
   const entries = new Map();
   const inflight = new Map();
+  const expired = (e) => now() - e.storedAt > maxAgeMs;
 
   if (filePath) {
     try {
       const saved = JSON.parse(readFileSync(filePath, 'utf8'));
       for (const [key, e] of Object.entries(saved)) {
-        if (persist(key) && typeof e?.storedAt === 'number') entries.set(key, { value: e.value, storedAt: e.storedAt });
+        if (persist(key) && typeof e?.storedAt === 'number' && !expired(e)) entries.set(key, { value: e.value, storedAt: e.storedAt });
       }
     } catch {
       // 파일이 없거나 깨졌으면 빈 상태로 시작한다(다시 받으면 된다)
@@ -27,6 +29,7 @@ export function createCache({ now = Date.now, filePath = null, persist = () => f
     saveQueued = true;
     writing = writing.then(() => new Promise((r) => setTimeout(r, 200))).then(async () => {
       saveQueued = false;
+      for (const [key, e] of entries) if (persist(key) && expired(e)) entries.delete(key);
       const data = Object.fromEntries([...entries].filter(([key]) => persist(key)));
       await mkdir(path.dirname(filePath), { recursive: true });
       const tmp = `${filePath}.tmp`;

@@ -91,3 +91,30 @@ test('파일 저장: persist 키만 저장하고, 다시 만들면 TTL 안의 �
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('파일 저장: maxAgeMs보다 오래된 저장 키는 읽지 않고, 저장할 때 지운다', async () => {
+  const { mkdtemp, rm, readFile, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  const dir = await mkdtemp(path.join(tmpdir(), 'cache-'));
+  const filePath = path.join(dir, 'cache.json');
+  try {
+    const now = clock(10_000_000);
+    await writeFile(filePath, JSON.stringify({
+      'news:A:old': { value: ['old'], storedAt: 1_000 },
+      'news:A:new': { value: ['new'], storedAt: 9_999_000 },
+    }));
+    const c = createCache({ now, filePath, persist: (k) => k.startsWith('news:'), maxAgeMs: 5_000 });
+    let calls = 0;
+    assert.deepEqual((await c.get('news:A:old', Infinity, async () => { calls++; return ['fresh']; })).value, ['fresh'], '오래된 기록은 읽지 않는다');
+    assert.equal(calls, 1);
+    await c.flush();
+    assert.deepEqual(Object.keys(JSON.parse(await readFile(filePath, 'utf8'))).sort(), ['news:A:new', 'news:A:old']);
+    now.advance(4_500); // 이제 news:A:new(5.5초 전)는 오래됨, news:A:old(4.5초 전에 새로 받음)는 남는다
+    await c.get('news:B:x', 1000, async () => ['b']);
+    await c.flush();
+    assert.deepEqual(Object.keys(JSON.parse(await readFile(filePath, 'utf8'))).sort(), ['news:A:old', 'news:B:x']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

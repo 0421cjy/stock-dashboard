@@ -120,11 +120,13 @@ export function createFinnhubClient({ apiKey, fetch = globalThis.fetch, now = Da
     },
 
     earnings(symbol, { from, to }) {
-      return cache.get(`earnings:${symbol}:${from}`, TTL.earnings, async () => {
+      // v2: 분기(year·quarter)를 담기 시작하면서 예전 형식 캐시를 쓰지 않도록 키를 바꿨다
+      return cache.get(`earnings:v2:${symbol}:${from}`, TTL.earnings, async () => {
         const data = await request('/calendar/earnings', { symbol, from, to });
         return (data?.earningsCalendar ?? [])
           .filter((e) => e.symbol === symbol && e.date)
-          .map((e) => ({ symbol, date: e.date, hour: e.hour ?? '', epsEstimate: e.epsEstimate ?? null }));
+          // year·quarter: 같은 분기 발표가 날짜만 바뀌어 두 번 오는 경우를 서버에서 하나로 합칠 때 쓴다
+          .map((e) => ({ symbol, date: e.date, hour: e.hour ?? '', epsEstimate: e.epsEstimate ?? null, year: e.year ?? null, quarter: e.quarter ?? null }));
       });
     },
 
