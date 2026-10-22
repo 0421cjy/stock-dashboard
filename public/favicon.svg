@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 평가금액 비중 트리맵을 줄인 모양(파스텔: 라벤더·로즈·스카이) -->
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7" fill="#ffffff" stroke="#dfe3ea"/>
+  <rect x="5" y="5" width="12" height="22" rx="2.5" fill="#b9a8e8"/>
+  <rect x="19" y="5" width="8" height="12" rx="2.5" fill="#f4b8cf"/>
+  <rect x="19" y="19" width="8" height="8" rx="2.5" fill="#a9cdf2"/>
+</svg>
